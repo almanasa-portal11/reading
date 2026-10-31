@@ -1,0 +1,9 @@
+body {
+    font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
