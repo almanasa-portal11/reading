@@ -302,7 +302,6 @@
             </div>
 
             <!-- بطاقة التحويل الصوتي للقراءة -->
-            <!-- بطاقة التحويل الصوتي للقراءة -->
 <div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg">
     <div class="flex items-center justify-between">
         <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
@@ -319,6 +318,33 @@
     </div>
     
     <textarea id="tts-text" rows="4" placeholder="الصق الملخص أو الاقتباس هنا لتسمع طريقة إلقائه الصحيحة..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-400 resize-none"></textarea>
+
+    <!-- لوحة التحكم بالصوت للتحكم بالسرعة والنبرة -->
+    <div class="bg-[#0F141C] p-3 rounded-xl border border-gray-800 space-y-2 my-3">
+        <div class="flex items-center justify-between text-xs text-gray-300">
+            <span class="font-bold flex items-center gap-1.5 text-sky-400">
+                <i class="fa-solid fa-sliders"></i> إعدادات القراءة الصوتية
+            </span>
+            <span id="speed-label" class="text-[10px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold">السرعة: 1.0x</span>
+        </div>
+        
+        <!-- شريط التحكم بالسرعة -->
+        <div class="flex items-center gap-3 text-xs text-gray-400">
+            <span>بطيء</span>
+            <input type="range" id="speech-rate" min="0.5" max="1.8" step="0.1" value="1.0" oninput="updateSpeedLabel(this.value)" class="w-full accent-sky-400 cursor-pointer h-1.5 bg-gray-800 rounded-lg">
+            <span>سريع</span>
+        </div>
+
+        <!-- أزرار التحكم بالتشغيل والإيقاف -->
+        <div class="flex gap-2 pt-1">
+            <button onclick="speakTextCustom()" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-play"></i> استماع
+            </button>
+            <button onclick="stopSpeechCustom()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold px-4 py-2 rounded-xl transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-stop"></i> إيقاف
+            </button>
+        </div>
+    </div>
     
     <div class="flex justify-between items-center">
         <span id="tts-status" class="text-[11px] text-gray-400">جاهز للقراءة والإلقاء</span>
