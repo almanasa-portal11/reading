@@ -1167,3 +1167,9 @@ function stopSpeechCustom() {
         showToast("تم إيقاف القراءة الصوتية.");
     }
 }
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => console.error('SW Error:', err));
+    });
+}
