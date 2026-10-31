@@ -1,0 +1,27 @@
+{
+  "name": "منصة سفير القراءة",
+  "short_name": "سفير القراءة",
+  "description": "منصتك للتحضير لتحدي القراءة العربي",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#FAEFDB",
+  "theme_color": "#0F141C",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
