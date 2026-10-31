@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحدي القراءة العربي - المنصة الذكية</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#0F141C] text-white min-h-screen pb-24">
+
+    <!-- الشريط العلوي -->
+<header class="flex justify-between items-center p-5 max-w-md mx-auto sticky top-0 bg-[#0F141C]/90 backdrop-blur z-10 border-b border-gray-800/50">
+    <!-- زر القائمة (الثلاث شرطات) -->
+    <button onclick="toggleMenu()" class="text-gray-300 text-xl focus:outline-none hover:text-sky-400 transition">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+    
+    <h1 id="header-title" class="font-bold text-lg">منصة سفير القراءة</h1>
+    
+    <!-- زر التنبيهات (الجرس) -->
+    <button onclick="showNotifications()" class="text-gray-300 text-xl focus:outline-none relative hover:text-sky-400 transition">
+        <i class="fa-regular fa-bell"></i>
+        <span class="absolute top-0 right-0 w-2 h-2 bg-sky-400 rounded-full animate-pulse"></span>
+    </button>
+</header>
+
+    <main class="max-w-md mx-auto px-4 mt-4">
+
+        <!-- 1. الصفحة الرئيسية واللوحة التفاعلية -->
+        <div id="tab-home" class="tab-content active space-y-5 pb-10">
+<!-- مؤقت العد التنازلي لتسليم الجوازات -->
+<div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg my-4">
+    <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
+            <i class="fa-solid fa-hourglass-half"></i> الموعد النهائي لتسليم الجوازات
+        </h3>
+        <span class="text-[10px] bg-sky-500/20 text-sky-400 px-2 py-0.5 rounded-full font-bold animate-pulse">متبقي</span>
+    </div>
+    <p class="text-gray-400 text-xs">استعد لتسليم جوازات القراءة وتأكد من إنجاز جميع كتبك قبل انتهاء الوقت:</p>
+    
+    <!-- صناديق العداد الدقيقة -->
+    <div class="grid grid-cols-4 gap-2 pt-1 text-center">
+        <div class="bg-[#0F141C] p-2.5 rounded-xl border border-gray-800 flex flex-col items-center">
+            <span id="cd-days" class="text-base font-bold text-white font-mono">00</span>
+            <span class="text-[10px] text-gray-400">يوم</span>
+        </div>
+        <div class="bg-[#0F141C] p-2.5 rounded-xl border border-gray-800 flex flex-col items-center">
+            <span id="cd-hours" class="text-base font-bold text-white font-mono">00</span>
+            <span class="text-[10px] text-gray-400">ساعة</span>
+        </div>
+        <div class="bg-[#0F141C] p-2.5 rounded-xl border border-gray-800 flex flex-col items-center">
+            <span id="cd-minutes" class="text-base font-bold text-white font-mono">00</span>
+            <span class="text-[10px] text-gray-400">دقيقة</span>
+        </div>
+        <div class="bg-[#0F141C] p-2.5 rounded-xl border border-gray-800 flex flex-col items-center">
+            <span id="cd-seconds" class="text-base font-bold text-sky-400 font-mono animate-pulse">00</span>
+            <span class="text-[10px] text-gray-400">ثانية</span>
+        </div>
+    </div>
+</div>
+
+            <!-- بطاقة الترحيب والدافع -->
+            <div class="bg-gradient-to-r from-sky-600 to-indigo-700 p-5 rounded-2xl text-white shadow-lg space-y-2 relative overflow-hidden">
+                <div class="absolute -left-4 -bottom-4 opacity-10 text-8xl font-black">📖</div>
+                <span class="bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">موسم تحدي القراءة</span>
+                <h2 class="text-xl font-bold">أهلاً بك يا سفير القراءة! 🌟</h2>
+                <p class="text-sky-100 text-xs leading-relaxed max-w-[90%]">
+                    رحلتك نحو التتويج تبدأ من هنا. اقرأ، تلخّص، وحلّل أفكارك واستعن بالمدرب الذكي لتكون رائد المعرفة.
+                </p>
+            </div>
+
+            <!-- إحصائيات الإنجاز السريعة -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-[#1E293B] p-4 rounded-xl border border-gray-800 space-y-1 shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400">كتب المنصة</span>
+                        <i class="fa-solid fa-globe text-amber-400 text-sm"></i>
+                    </div>
+                    <div id="stat-sheet-count" class="text-2xl font-bold text-white">0</div>
+                    <p class="text-[10px] text-gray-500">كتاب متوفر للجميع</p>
+                </div>
+
+                <div class="bg-[#1E293B] p-4 rounded-xl border border-gray-800 space-y-1 shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-400">كتبك الشخصية</span>
+                        <i class="fa-solid fa-book-bookmark text-sky-400 text-sm"></i>
+                    </div>
+                    <div id="stat-user-count" class="text-2xl font-bold text-white">0</div>
+                    <p class="text-[10px] text-gray-500">كتاب في أرشيفك</p>
+                </div>
+            </div>
+
+            <!-- بطاقة حكم واقتباس أدبي متجدد -->
+            <div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-2 shadow">
+                <div class="flex items-center gap-2 text-sky-400 text-xs font-bold">
+                    <i class="fa-solid fa-quote-left"></i>
+                    <span>إلهام اليوم</span>
+                </div>
+                <p id="daily-quote" class="text-xs text-gray-300 italic leading-relaxed">
+                    "القراءة تُعطيك أكثر من حياة واحدة، لأنها تُضيف إلى حياتك عقول الآخرين وأرواحهم."
+                </p>
+                <span id="daily-author" class="block text-[10px] text-gray-500 text-left">— عباس محمود العقاد</span>
+            </div>
+
+            <!-- أزرار الوصول السريع -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold text-gray-400">الانتقال السريع</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="switchTab('assistant')" class="bg-[#1E293B] hover:bg-[#283548] p-3 rounded-xl border border-gray-800 flex flex-col items-center gap-1.5 transition">
+                        <i class="fa-solid fa-robot text-sky-400 text-lg"></i>
+                        <span class="text-[11px] font-bold text-gray-200">المساعد</span>
+                    </button>
+                    <button onclick="switchTab('library')" class="bg-[#1E293B] hover:bg-[#283548] p-3 rounded-xl border border-gray-800 flex flex-col items-center gap-1.5 transition">
+                        <i class="fa-solid fa-book-open text-emerald-400 text-lg"></i>
+                        <span class="text-[11px] font-bold text-gray-200">المكتبة</span>
+                    </button>
+                    <button onclick="switchTab('analysis')" class="bg-[#1E293B] hover:bg-[#283548] p-3 rounded-xl border border-gray-800 flex flex-col items-center gap-1.5 transition">
+                        <i class="fa-solid fa-brain text-purple-400 text-lg"></i>
+                        <span class="text-[11px] font-bold text-gray-200">المختبر</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. المساعد الذكي (Chat Interface) -->
+        <div id="tab-assistant" class="tab-content space-y-4">
+
+            <!-- اختصارات سريعة للمساعد -->
+            <div class="flex gap-2 overflow-x-auto pb-2 text-xs">
+                <button onclick="sendQuickMessage('اشرح لي فكرة صعبة')" class="bg-[#1E293B] border border-gray-700 text-gray-200 px-3 py-2 rounded-xl whitespace-nowrap hover:border-sky-400 transition">💡 شرح فكرة</button>
+                <button onclick="sendQuickMessage('اختبر فهمي لهذا الفصل')" class="bg-[#1E293B] border border-gray-700 text-gray-200 px-3 py-2 rounded-xl whitespace-nowrap hover:border-sky-400 transition">🎯 اختبار الفهم</button>
+                <button onclick="sendQuickMessage('صحيح لي أخطائي اللغوية')" class="bg-[#1E293B] border border-gray-700 text-gray-200 px-3 py-2 rounded-xl whitespace-nowrap hover:border-sky-400 transition">✍️ تدقيق لغوي</button>
+            </div>
+
+            <!-- نافذة المحادثة -->
+            <div id="chat-box" class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 h-[380px] overflow-y-auto space-y-3 flex flex-col">
+                <!-- رسالة ترحيب من المساعد -->
+                <div class="bg-[#0F141C] border border-gray-800 p-3 rounded-2xl rounded-tr-none max-w-[85%] self-start text-xs text-gray-200 leading-relaxed">
+                    👋 أهلاً بك يا بطل! أنا <strong>مساعدك الذكي</strong> ومدربك في تحدي القراءة. كيف يمكنني مساعدتك اليوم في كتبك أو ملخصاتك؟
+                </div>
+            </div>
+
+            <!-- حقل إدخال الرسالة -->
+            <div class="flex gap-2">
+                <input id="chat-input" type="text" placeholder="اكتب سؤالك هنا..." class="bg-[#1E293B] border border-gray-800 text-white text-xs rounded-xl px-4 py-3 flex-1 focus:outline-none focus:border-sky-400">
+                <button onclick="sendMessage()" class="bg-sky-500 text-white px-4 rounded-xl hover:bg-sky-600 transition">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- قسم المفكرة وملاحظات السفير -->
+<div id="tab-notes" class="tab-content hidden space-y-5 pb-10">
+    <div>
+        <h2 class="text-xl font-bold">مفكرة السفير الأدبية</h2>
+        <p class="text-gray-400 text-xs">دون خواطرك، أفكارك، وخواطر القراءة لتكون مرجعاً دائماً لك.</p>
+    </div>
+
+    <!-- نموذج إضافة ملاحظة جديدة -->
+    <div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg">
+        <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
+            <i class="fa-solid fa-pen-to-square"></i> إضافة ملاحظة أو فكرة جديدة
+        </h3>
+        
+        <input id="note-title" type="text" placeholder="عنوان الملاحظة أو اسم الكتاب..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-400">
+        
+        <select id="note-category" class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-400">
+            <option value="💡 خواطر قرائية">💡 خواطر قرائية</option>
+            <option value="📝 أفكار تلخيص">📝 أفكار تلخيص</option>
+            <option value="⭐ اقتباسات خاصة">⭐ اقتباسات خاصة</option>
+            <option value="📌 أخرى">📌 أخرى</option>
+        </select>
+        
+        <textarea id="note-text" rows="3" placeholder="اكتب تفاصيل الفكرة أو الملاحظة هنا..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-400 resize-none"></textarea>
+        
+        <div class="flex justify-end">
+            <button onclick="saveStudentNote()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
+                <i class="fa-solid fa-floppy-disk"></i> حفظ الملاحظة
+            </button>
+        </div>
+    </div>
+
+    <!-- قائمة الملاحظات المحفوظة -->
+    <div id="notes-list" class="space-y-3">
+        <!-- يتم تعبئتها تلقائياً عبر JavaScript -->
+    </div>
+</div>
+
+        <!-- 3. المكتبة الذكية وتتبع الإنجاز -->
+        <div id="tab-library" class="tab-content space-y-6 pb-10">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold">المكتبة الرقمية وتتبع القراءة</h2>
+                    <p class="text-gray-400 text-xs">تصفح كتب المنصة المعتمدة أو ارفع كتبك الشخصية.</p>
+                </div>
+                <button onclick="toggleUploadModal()" class="bg-sky-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-sky-600 transition shadow flex items-center gap-1.5">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> رفع كتاب خاص
+                </button>
+            </div>
+
+            <!-- شريط البحث السريع في الكتب -->
+            <div class="relative my-3">
+                <input id="search-books-input" type="text" oninput="filterBooks()" placeholder="ابحث عن كتاب أو مؤلف..." class="w-full bg-[#1E293B] border border-gray-800 text-white text-xs rounded-xl pr-9 pl-3 py-2.5 focus:outline-none focus:border-sky-400">
+                <i class="fa-solid fa-magnifying-glass absolute right-3 top-3 text-gray-500 text-xs"></i>
+            </div>
+
+            <!-- نافذة رفع كتاب خاص بالمستخدم -->
+            <div id="upload-modal" class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 hidden shadow-lg">
+                <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> إضافة كتاب جديد من جهازك
+                </h3>
+                <input id="up-title" type="text" placeholder="عنوان الكتاب (مثال: عبقرية محمد)" class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-sky-400">
+                <input id="up-author" type="text" placeholder="اسم المؤلف" class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-sky-400">
+
+                <div class="space-y-1">
+                    <label class="text-[11px] text-gray-400">اختر ملف الكتاب (PDF):</label>
+                    <input id="up-file" type="file" accept=".pdf" class="w-full bg-[#0F141C] border border-gray-800 text-gray-300 text-xs rounded-xl px-3 py-2 file:ml-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-500 file:text-white hover:file:bg-sky-600 cursor-pointer">
+                </div>
+
+                <div class="flex gap-2 justify-end pt-1">
+                    <button onclick="toggleUploadModal()" class="bg-gray-700 text-gray-300 px-3 py-1.5 rounded-xl text-xs">إلغاء</button>
+                    <button onclick="saveUserBook()" class="bg-sky-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold">حفظ وإضافة للمكتبة</button>
+                </div>
+            </div>
+
+            <!-- قسم كتب المنصة العامة (المجلوبة تلقائياً من Google Sheet) -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-globe"></i> كتب المنصة العامة (Google Sheets)
+                    </h3>
+                    <button onclick="fetchSheetBooks()" class="text-[11px] text-sky-400 hover:underline flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> تحديث
+                    </button>
+                </div>
+
+                <!-- الحاوية التي ستظهر فيها كتب الجوجل شيت -->
+                <div id="sheet-books-container" class="grid grid-cols-1 gap-3">
+                    <div class="bg-[#1E293B]/50 border border-gray-800 p-4 rounded-xl text-center text-gray-400 text-xs animate-pulse">
+                        جاري تحميل كتب المنصة من جدول البيانات...
+                    </div>
+                </div>
+            </div>
+
+            <!-- قسم كتب المستخدم الخاصة المرفوعة (المحفوظة محلياً) -->
+            <div class="space-y-3 pt-4 border-t border-gray-800">
+                <h3 class="text-sm font-bold text-gray-300 flex items-center gap-2">
+                    <i class="fa-solid fa-book-bookmark text-sky-400"></i> كتبك الشخصية والمرفوعة
+                </h3>
+                <div id="user-books-container" class="space-y-3">
+                    <!-- تعبئة كتب المستخدم محلياً مع ملفات الـ PDF والاقتباسات -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. مختبر التحليل الأدبي -->
+        <div id="tab-analysis" class="tab-content space-y-5 pb-10">
+            <div>
+                <h2 class="text-xl font-bold">مختبر التحليل الأدبي والتلخيص</h2>
+                <p class="text-gray-400 text-xs">اكتب ملخصك أو تحليلك للكتاب، ودع المدرب الأدبي يقيّمه وفق معايير تحدي القراءة العربي.</p>
+            </div>
+
+            <!-- نموذج كتابة التلخيص والتحليل -->
+            <div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg">
+                <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
+                    <i class="fa-solid fa-brain"></i> مساحة التلخيص والتحليل الذكي
+                </h3>
+
+                <input id="analysis-book-title" type="text" placeholder="عنوان الكتاب الذي تحلله..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-sky-400">
+
+                <textarea id="analysis-text" rows="5" placeholder="اكتب ملخصك الأدبي هنا (ركز على: الفكرة العامة، الأفكار الرئيسية، الأثر الشخصي، والدرس المستفاد)..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-400 resize-none"></textarea>
+
+                <div class="flex justify-end gap-2">
+                    <button onclick="evaluateAnalysis()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> تقييم وتحليل الملخص
+                    </button>
+                </div>
+            </div>
+
+            <!-- نافذة عرض نتائج التقييم -->
+            <div id="analysis-result-card" class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 hidden shadow-lg">
+                <h3 class="font-bold text-sm text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-star"></i> تقرير لجنة التحكيم الافتراضية
+                </h3>
+                <div id="analysis-output" class="text-xs text-gray-200 leading-relaxed bg-[#0F141C] p-3 rounded-xl border border-gray-800 whitespace-pre-line">
+                    <!-- سيتم عرض التقييم هنا -->
+                </div>
+            </div>
+        </div>
+        <!-- ✅ تم إغلاق tab-analysis هنا، والصوتي صار تبويب مستقل -->
+
+        <!-- 5. المختبر الصوتي للإلقاء والتدريب -->
+        <div id="tab-audio" class="tab-content space-y-5 pb-10">
+            <div>
+                <h2 class="text-xl font-bold">المختبر الصوتي للإلقاء والتدريب</h2>
+                <p class="text-gray-400 text-xs">تدرب على إلقاء ملخصاتك، واستمع إليها بصوت احترافي، أو سجل صوتك لتقييم أدائك.</p>
+            </div>
+
+            <!-- بطاقة التحويل الصوتي للقراءة -->
+            <!-- بطاقة التحويل الصوتي للقراءة -->
+<div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg">
+    <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-sky-400 flex items-center gap-2">
+            <i class="fa-solid fa-volume-high"></i> القارئ الآلي للنصوص (TTS)
+        </h3>
+        <!-- أمواج تفاعلية تظهر فقط أثناء إلقاء النص الآلي -->
+        <div id="tts-wave" class="flex items-center gap-1 h-4 hidden">
+            <span class="w-0.5 bg-sky-400 rounded-full animate-pulse h-2"></span>
+            <span class="w-0.5 bg-sky-400 rounded-full animate-pulse h-4"></span>
+            <span class="w-0.5 bg-sky-400 rounded-full animate-pulse h-3"></span>
+            <span class="w-0.5 bg-sky-400 rounded-full animate-pulse h-4"></span>
+            <span class="w-0.5 bg-sky-400 rounded-full animate-pulse h-2"></span>
+        </div>
+    </div>
+    
+    <textarea id="tts-text" rows="4" placeholder="الصق الملخص أو الاقتباس هنا لتسمع طريقة إلقائه الصحيحة..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-sky-400 resize-none"></textarea>
+    
+    <div class="flex justify-between items-center">
+        <span id="tts-status" class="text-[11px] text-gray-400">جاهز للقراءة والإلقاء</span>
+        <button onclick="playTextAudio()" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-play"></i> استمع للإلقاء
+        </button>
+    </div>
+</div>
+
+            <!-- بطاقة تسجيل الصوت الشخصي مع المعاينة البصرية -->
+<div class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg">
+    <h3 class="font-bold text-sm text-amber-400 flex items-center gap-2">
+        <i class="fa-solid fa-microphone"></i> منصة تسجيل وتدريب الإلقاء الشخصي
+    </h3>
+    <p class="text-gray-400 text-xs">سجل صوتك وأنت تلقي ملخص الكتاب، وشاهد مؤشر الصوت الحي أثناء الكلام.</p>
+    
+    <!-- منطقة المعاينة البصرية (الأمواج الصوتية والوقت) -->
+    <div id="visualizer-container" class="bg-[#0F141C] border border-gray-800 rounded-xl p-3 flex items-center justify-between h-14 hidden">
+        <div class="flex items-center gap-1.5 h-6">
+            <!-- أعمدة الأمواج الصوتية المتحركة -->
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-3"></span>
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-6 delay-75"></span>
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-4 delay-150"></span>
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-5 delay-200"></span>
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-2 delay-300"></span>
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-5"></span>
+            <span class="w-1 bg-sky-400 rounded-full animate-pulse h-3 delay-100"></span>
+        </div>
+        <span id="recording-timer" class="text-xs font-mono text-red-400 font-bold">00:00</span>
+    </div>
+
+    <div class="flex items-center gap-3 pt-1">
+        <button id="record-btn" onclick="toggleRecording()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-circle-dot" id="record-icon"></i> <span id="record-text">بدء التسجيل</span>
+        </button>
+    </div>
+
+    <div id="audio-playback-container" class="pt-2 hidden">
+        <!-- سيظهر هنا مشغل الصوت للتسجيل الذي سجلته -->
+    </div>
+</div>
+        </div>
+
+    </main>
+
+    <!-- شريط التنقل السفلي -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#1E293B] border-t border-gray-800 py-3 px-6 max-w-md mx-auto flex justify-between text-gray-400 text-xs z-20">
+        <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center text-sky-400 transition">
+            <i class="fa-solid fa-house text-lg mb-1"></i><span>الرئيسية</span>
+        </button>
+        <button onclick="switchTab('notes')" id="nav-notes" class="flex flex-col items-center gap-1 text-gray-400 hover:text-sky-400 transition">
+    <i class="fa-solid fa-note-sticky text-lg"></i>
+    <span class="text-[10px] font-bold">الملاحظات</span>
+</button>
+        <button onclick="switchTab('assistant')" id="nav-assistant" class="flex flex-col items-center hover:text-sky-400 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-lg mb-1"></i><span>المساعد</span>
+        </button>
+        <button onclick="switchTab('library')" id="nav-library" class="flex flex-col items-center hover:text-sky-400 transition">
+            <i class="fa-solid fa-book text-lg mb-1"></i><span>المكتبة</span>
+        </button>
+        <button onclick="switchTab('analysis')" id="nav-analysis" class="flex flex-col items-center hover:text-sky-400 transition">
+            <i class="fa-solid fa-brain text-lg mb-1"></i><span>التحليل</span>
+        </button>
+        <button onclick="switchTab('audio')" id="nav-audio" class="flex flex-col items-center hover:text-sky-400 transition">
+            <i class="fa-solid fa-microphone-lines text-lg mb-1"></i><span>الصوتي</span>
+        </button>
+    </nav>
+
+    <script src="script.js"></script>
+    
+    
+</body>
+</html>
