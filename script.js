@@ -3,7 +3,7 @@
 // ==========================================
 
 // رابط وسيط Cloudflare Worker (المفتاح محفوظ هناك ولا يظهر في الكود)
-const API_URL = "https://safir-ai.drazhasan7.workers.dev";
+const API_URL = "https://safir-proxy.drazhasan7.workers.dev";
 
 // معرف Google Sheet (الموجود في الرابط بين /d/ و /edit)
 const SPREADSHEET_ID = '1UnYvDX6b-O17jcsps_96MVsQ3kgwg7jKshhr69UwUKo';
