@@ -670,33 +670,110 @@ function playTextAudio() {
         return;
     }
 
-    // إيقاف أي قراءة سابقة
-    window.speechSynthesis.cancel();
+    speakArabic(text, {
+        rate: 0.9, // سرعة هادئة ومناسبة للإلقاء الأدبي
+        onStart: () => {
+            if (waveEl) waveEl.classList.remove('hidden');
+            if (statusEl) statusEl.textContent = "جاري الإلقاء الصوتي...";
+            showToast("جاري البدء بالإلقاء الصوتي...");
+        },
+        onEnd: () => {
+            if (waveEl) waveEl.classList.add('hidden');
+            if (statusEl) statusEl.textContent = "انتهى الإلقاء";
+        },
+        onError: (e) => {
+            console.error("TTS Error:", e);
+            if (waveEl) waveEl.classList.add('hidden');
+            if (statusEl) statusEl.textContent = "حدث خطأ في القراءة";
+            showToast("حدث خطأ أثناء محاولة تشغيل الصوت.");
+        }
+    });
+}
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ar-SA'; // اللغة العربية
-    utterance.rate = 0.9;     // سرعة هادئة ومناسبة للإلقاء الأدبي
-    utterance.pitch = 1.0;
+// ------------------------------------------
+// محرك القراءة الصوتية العربية (اختيار صوت عربي + تقسيم النص الطويل)
+// ------------------------------------------
+let arabicVoice = null;
+let speechToken = 0; // لإلغاء أي سلسلة قراءة قديمة
 
-    utterance.onstart = () => {
-        if (waveEl) waveEl.classList.remove('hidden');
-        if (statusEl) statusEl.textContent = "جاري الإلقاء الصوتي...";
-        showToast("جاري البدء بالإلقاء الصوتي...");
+function pickArabicVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    arabicVoice = voices.find(v => (v.lang || '').toLowerCase().replace('_', '-').startsWith('ar')) || null;
+    return arabicVoice;
+}
+
+if ('speechSynthesis' in window) {
+    pickArabicVoice();
+    window.speechSynthesis.onvoiceschanged = pickArabicVoice; // الأصوات تُحمَّل متأخرة في كروم
+}
+
+// تقسيم النص إلى مقاطع قصيرة (كروم يقطع القراءة الطويلة)
+function splitForSpeech(text, maxLen = 160) {
+    const sentences = text.match(/[^.!؟?\n،,؛;]+[.!؟?\n،,؛;]*/g) || [text];
+    const chunks = [];
+    let current = '';
+    sentences.forEach(s => {
+        if ((current + s).length <= maxLen) {
+            current += s;
+        } else {
+            if (current.trim()) chunks.push(current.trim());
+            current = s;
+            while (current.length > maxLen) {
+                const cut = current.lastIndexOf(' ', maxLen);
+                const at = cut > 0 ? cut : maxLen;
+                chunks.push(current.slice(0, at).trim());
+                current = current.slice(at);
+            }
+        }
+    });
+    if (current.trim()) chunks.push(current.trim());
+    return chunks;
+}
+
+function speakArabic(text, { rate = 1.0, onStart, onEnd, onError } = {}) {
+    const synth = window.speechSynthesis;
+    const token = ++speechToken;
+    synth.cancel();
+
+    if (!pickArabicVoice() && synth.getVoices().length > 0) {
+        showToast("⚠️ لا يوجد صوت عربي مثبّت على جهازك، قد لا يُسمع الصوت. ثبّت حزمة صوت عربي من إعدادات النظام.");
+    }
+
+    const chunks = splitForSpeech(text);
+    let index = 0;
+    let started = false;
+
+    const speakNext = () => {
+        if (token !== speechToken) return; // أُلغيت أو بدأت قراءة جديدة
+        if (index >= chunks.length) {
+            if (onEnd) onEnd();
+            return;
+        }
+        const u = new SpeechSynthesisUtterance(chunks[index++]);
+        u.lang = 'ar-SA';
+        if (arabicVoice) u.voice = arabicVoice;
+        u.rate = rate;
+        u.pitch = 1.0;
+        u.onstart = () => {
+            if (!started) {
+                started = true;
+                if (onStart) onStart();
+            }
+        };
+        u.onend = speakNext;
+        u.onerror = (e) => {
+            if (token !== speechToken) return;
+            if (e.error === 'canceled' || e.error === 'interrupted') return;
+            speechToken++;
+            if (onError) onError(e);
+        };
+        currentUtterance = u; // الاحتفاظ بمرجع يمنع حذفه تلقائياً في بعض المتصفحات
+        synth.speak(u);
     };
 
-    utterance.onend = () => {
-        if (waveEl) waveEl.classList.add('hidden');
-        if (statusEl) statusEl.textContent = "انتهى الإلقاء";
-    };
-
-    utterance.onerror = (e) => {
-        console.error("TTS Error:", e);
-        if (waveEl) waveEl.classList.add('hidden');
-        if (statusEl) statusEl.textContent = "حدث خطأ في القراءة";
-        showToast("حدث خطأ أثناء محاولة تشغيل الصوت.");
-    };
-
-    window.speechSynthesis.speak(utterance);
+    // تأخير بسيط بعد cancel() لأن كروم قد يتجاهل speak() الفوري
+    setTimeout(speakNext, 120);
 }
 
 // 2. تسجيل صوت الطالب (MediaRecorder API)
@@ -722,7 +799,10 @@ async function toggleRecording() {
             }
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
+            // اختيار صيغة تسجيل يدعمها المتصفح (webm في كروم، mp4 في سفاري)
+            const preferredTypes = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'];
+            const supportedType = preferredTypes.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+            mediaRecorder = supportedType ? new MediaRecorder(stream, { mimeType: supportedType }) : new MediaRecorder(stream);
             audioChunks = [];
 
             mediaRecorder.ondataavailable = (event) => {
@@ -984,9 +1064,6 @@ function speakTextCustom(textToRead = null) {
         return;
     }
 
-    // إلغاء أي قراءة سابقة
-    window.speechSynthesis.cancel();
-
     // النص الممرر، أو النص الموجود في حاوية التلخيص
     const text = (typeof textToRead === 'string' && textToRead)
         ? textToRead
@@ -997,21 +1074,28 @@ function speakTextCustom(textToRead = null) {
         return;
     }
 
-    currentUtterance = new SpeechSynthesisUtterance(text);
-    currentUtterance.lang = 'ar-SA';
-
     const rateInput = document.getElementById('speech-rate');
-    currentUtterance.rate = rateInput ? parseFloat(rateInput.value) || 1.0 : 1.0;
-    currentUtterance.pitch = 1.0;
+    const rate = rateInput ? parseFloat(rateInput.value) || 1.0 : 1.0;
 
-    window.speechSynthesis.speak(currentUtterance);
+    speakArabic(text, {
+        rate,
+        onError: (e) => {
+            console.error("TTS Error:", e);
+            showToast("حدث خطأ أثناء محاولة تشغيل الصوت.");
+        }
+    });
     showToast("جاري القراءة الصوتية... 🔊");
 }
 
 // دالة إيقاف القراءة الصوتية
 function stopSpeechCustom() {
-    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+    if ('speechSynthesis' in window) {
+        speechToken++; // إلغاء سلسلة المقاطع المتبقية
         window.speechSynthesis.cancel();
+        const waveEl = document.getElementById('tts-wave');
+        const statusEl = document.getElementById('tts-status');
+        if (waveEl) waveEl.classList.add('hidden');
+        if (statusEl) statusEl.textContent = "تم الإيقاف";
         showToast("تم إيقاف القراءة الصوتية.");
     }
 }
