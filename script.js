@@ -75,18 +75,23 @@ function setNotes(notes) {
 function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     const tab = document.getElementById('tab-' + tabName);
-    if (tab) tab.classList.add('active');
+    if (tab) {
+        tab.classList.remove('hidden'); // تبويب الملاحظات كان يحمل hidden فلا يظهر أبداً
+        tab.classList.add('active');
+    }
 
     const titles = {
         'home': 'منصة سفير القراءة',
+        'notes': 'مفكرة السفير',
         'assistant': 'المساعد الذكي',
         'library': 'مكتبة الكتب',
-        'analysis': 'مختبر التحليل الأدبي'
+        'analysis': 'مختبر التحليل الأدبي',
+        'audio': 'المختبر الصوتي'
     };
     const header = document.getElementById('header-title');
     if (header && titles[tabName]) header.innerText = titles[tabName];
 
-    ['home', 'assistant', 'library', 'analysis'].forEach(t => {
+    ['home', 'notes', 'assistant', 'library', 'analysis', 'audio'].forEach(t => {
         const btn = document.getElementById('nav-' + t);
         if (!btn) return;
         if (t === tabName) {
@@ -670,8 +675,11 @@ function playTextAudio() {
         return;
     }
 
+    const rateInput = document.getElementById('speech-rate');
+    const rate = rateInput ? parseFloat(rateInput.value) || 1.0 : 1.0; // السرعة من الشريط
+
     speakArabic(text, {
-        rate: 0.9, // سرعة هادئة ومناسبة للإلقاء الأدبي
+        rate,
         onStart: () => {
             if (waveEl) waveEl.classList.remove('hidden');
             if (statusEl) statusEl.textContent = "جاري الإلقاء الصوتي...";
@@ -1064,10 +1072,14 @@ function speakTextCustom(textToRead = null) {
         return;
     }
 
-    // النص الممرر، أو النص الموجود في حاوية التلخيص
-    const text = (typeof textToRead === 'string' && textToRead)
-        ? textToRead
-        : (document.getElementById('summary-output')?.innerText || "أهلاً بك في منصة سفير القراءة");
+    // زر "استماع" بدون نص ممرر: يقرأ ما في مربع النص (tts-text) مع الأمواج والحالة
+    // (كان يبحث عن summary-output وهو غير موجود في الصفحة، فيقرأ جملة الترحيب فقط)
+    if (typeof textToRead !== 'string' || !textToRead) {
+        playTextAudio();
+        return;
+    }
+
+    const text = textToRead;
 
     if (!text || text.trim() === "") {
         showToast("لا يوجد نص حالي لقراءته.");
