@@ -951,3 +951,59 @@ function deleteStudentNote(id) {
 document.addEventListener('DOMContentLoaded', () => {
     loadStudentNotes();
 });
+
+// ==========================================
+// التحكم القراءة الصوتية الآلية (Text-to-Speech Control)
+// ==========================================
+
+let currentUtterance = null;
+
+// تحديث نص السرعة الظاهر للمستخدم
+function updateSpeedLabel(val) {
+    const label = document.getElementById('speed-label');
+    if (label) {
+        label.textContent = `السرعة: ${parseFloat(val).toFixed(1)}x`;
+    }
+}
+
+// دالة تشغيل القراءة الصوتية بالسرعة المحددة
+function speakTextCustom(textToRead = null) {
+    // إلغاء أي قراءة سابقة شغال حالياً
+    window.speechSynthesis.cancel();
+
+    // جلب النص (إما النص الممرر أو النص الموجود في حاوية التلخيص)
+    const text = textToRead || document.getElementById('summary-output')?.innerText || "أهلاً بك في منصة سفير القراءة";
+    
+    if (!text || text.trim() === "") {
+        showToast("لا يوجد نص حالي لقراءته.");
+        return;
+    }
+
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    
+    // ضبط اللغة العربية
+    currentUtterance.lang = 'ar-SA';
+
+    // جلب السرعة من شريط التحكم
+    const rateInput = document.getElementById('speech-rate');
+    if (rateInput) {
+        currentUtterance.rate = parseFloat(rateInput.value);
+    } else {
+        currentUtterance.rate = 1.0;
+    }
+
+    // ضبط نبرة الصوت
+    currentUtterance.pitch = 1.0;
+
+    // البدء بالنطق
+    window.speechSynthesis.speak(currentUtterance);
+    showToast("جاري القراءة الصوتية... 🔊");
+}
+
+// دالة إيقاف القراءة الصوتية
+function stopSpeechCustom() {
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        showToast("تم إيقاف القراءة الصوتية.");
+    }
+}
