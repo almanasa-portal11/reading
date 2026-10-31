@@ -50,6 +50,24 @@ function setBooks(books) {
     }
 }
 
+function getNotes() {
+    try {
+        const notes = JSON.parse(localStorage.getItem('student_notes'));
+        return Array.isArray(notes) ? notes : [];
+    } catch {
+        return [];
+    }
+}
+
+function setNotes(notes) {
+    try {
+        localStorage.setItem('student_notes', JSON.stringify(notes));
+    } catch (e) {
+        console.error("Storage Error:", e);
+        alert("تعذر حفظ الملاحظات (قد تكون مساحة التخزين ممتلئة).");
+    }
+}
+
 // ==========================================
 // التنقل بين التبويبات
 // ==========================================
@@ -264,7 +282,7 @@ async function fetchSheetBooks() {
             count++;
         });
 
-        // **تحديث عداد كتب المنصة في الصفحة الرئيسية**
+        // تحديث عداد كتب المنصة في الصفحة الرئيسية
         updateHomeStats(count);
 
         if (count === 0) {
@@ -390,6 +408,7 @@ async function loadUserBooks() {
                 لم تقم برفع أي كتاب خاص حتى الآن. اضغط على "رفع كتاب خاص" لأرشفة كتبك.
             </div>
         `;
+        updateHomeStats(); // تحديث العداد إلى صفر بعد حذف آخر كتاب
         return;
     }
 
@@ -448,8 +467,8 @@ async function loadUserBooks() {
         `;
         container.appendChild(card);
     }
-    
-    // **أضف هذا السطر هنا في النهاية لتحديث عدد الكتب الشخصية تلقائياً**
+
+    // تحديث عدد الكتب الشخصية تلقائياً
     updateHomeStats();
 }
 
@@ -526,7 +545,9 @@ ${text}
             { role: "system", content: "أنت رئيس لجنة تحكيم مسابقة 'تحدي القراءة العربي' وناقد أدبي محترف. أجب بالعربية الفصحى بأسلوب واضح ومحفّز." },
             { role: "user", content: prompt }
         ]);
-msgDiv.innerHTML = formatAiOutput(text);
+
+        // عرض رد الذكاء الاصطناعي (reply) داخل صندوق النتيجة (outputDiv)
+        outputDiv.innerHTML = formatAiOutput(reply);
 
     } catch (error) {
         console.error("AI Analysis Error:", error);
@@ -570,7 +591,7 @@ const QUOTES = [
 
 function updateHomeStats(sheetCount) {
     const userBooks = getBooks();
-    
+
     const userCountEl = document.getElementById('stat-user-count');
     if (userCountEl) userCountEl.textContent = userBooks.length;
 
@@ -599,20 +620,17 @@ function setRandomQuote() {
 // دالة التصفية في الكتب
 function filterBooks() {
     const query = document.getElementById('search-books-input')?.value.toLowerCase().trim() || '';
-    
+
     // تصفية كتب الشيت والكتب الشخصية
     const allCards = document.querySelectorAll('#sheet-books-container > div, #user-books-container > div');
     allCards.forEach(card => {
         const text = card.innerText.toLowerCase();
-        if (text.includes(query)) {
-            card.style.display = '';
-        } else {
-            card.style.display = 'none';
-        }
+        card.style.display = text.includes(query) ? '' : 'none';
     });
 }
 
 // دالة إشعار سريع (Toast Notification)
+let toastTimeout = null;
 function showToast(message) {
     let toast = document.getElementById('toast-notification');
     if (!toast) {
@@ -621,11 +639,12 @@ function showToast(message) {
         toast.className = "fixed bottom-16 left-1/2 -translate-x-1/2 bg-sky-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg transition-all duration-300 opacity-0 pointer-events-none z-50";
         document.body.appendChild(toast);
     }
-    
+
     toast.innerText = message;
     toast.classList.remove('opacity-0', 'pointer-events-none');
-    
-    setTimeout(() => {
+
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none');
     }, 2500);
 }
@@ -635,8 +654,7 @@ function showToast(message) {
 // المختبر الصوتي والإلقاء
 // ==========================================
 
-// 1. القارئ الآلي للنصوص (Text-to-Speech)
-// القارئ الآلي للنصوص (Text-to-Speech) مع معاينة الأمواج الصوتية الحية
+// 1. القارئ الآلي للنصوص (Text-to-Speech) مع معاينة الأمواج الصوتية الحية
 function playTextAudio() {
     const text = document.getElementById('tts-text').value.trim();
     const waveEl = document.getElementById('tts-wave');
@@ -660,20 +678,17 @@ function playTextAudio() {
     utterance.rate = 0.9;     // سرعة هادئة ومناسبة للإلقاء الأدبي
     utterance.pitch = 1.0;
 
-    // عند بدء النطق الآلي
     utterance.onstart = () => {
         if (waveEl) waveEl.classList.remove('hidden');
         if (statusEl) statusEl.textContent = "جاري الإلقاء الصوتي...";
         showToast("جاري البدء بالإلقاء الصوتي...");
     };
 
-    // عند انتهاء النطق الآلي
     utterance.onend = () => {
         if (waveEl) waveEl.classList.add('hidden');
         if (statusEl) statusEl.textContent = "انتهى الإلقاء";
     };
 
-    // في حال حدوث خطأ
     utterance.onerror = (e) => {
         console.error("TTS Error:", e);
         if (waveEl) waveEl.classList.add('hidden');
@@ -688,8 +703,9 @@ function playTextAudio() {
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
-let timerInterval = null;
+let recordingInterval = null;
 let secondsElapsed = 0;
+let lastAudioUrl = null;
 
 async function toggleRecording() {
     const btnText = document.getElementById('record-text');
@@ -700,6 +716,11 @@ async function toggleRecording() {
 
     if (!isRecording) {
         try {
+            if (!navigator.mediaDevices || !window.MediaRecorder) {
+                alert("متصفحك لا يدعم التسجيل الصوتي.");
+                return;
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
@@ -709,9 +730,13 @@ async function toggleRecording() {
             };
 
             mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+                // استخدام النوع الحقيقي الذي سجّل به المتصفح (webm أو mp4 ...)
+                const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+
+                if (lastAudioUrl) URL.revokeObjectURL(lastAudioUrl);
                 const audioUrl = URL.createObjectURL(audioBlob);
-                
+                lastAudioUrl = audioUrl;
+
                 playbackContainer.classList.remove('hidden');
                 playbackContainer.innerHTML = `
                     <div class="space-y-2 bg-[#0F141C] p-3 rounded-xl border border-gray-800">
@@ -732,20 +757,14 @@ async function toggleRecording() {
                     </div>
                 `;
 
-                // تفعيل الأمواج المتحركة عند الضغط على زر التشغيل (Play)
+                // تفعيل الأمواج المتحركة عند التشغيل
                 const audioEl = document.getElementById('my-audio-player');
                 const waveEl = document.getElementById('listening-wave');
 
                 if (audioEl && waveEl) {
-                    audioEl.onplay = () => {
-                        waveEl.classList.remove('hidden');
-                    };
-                    audioEl.onpause = () => {
-                        waveEl.classList.add('hidden');
-                    };
-                    audioEl.onended = () => {
-                        waveEl.classList.add('hidden');
-                    };
+                    audioEl.onplay = () => waveEl.classList.remove('hidden');
+                    audioEl.onpause = () => waveEl.classList.add('hidden');
+                    audioEl.onended = () => waveEl.classList.add('hidden');
                 }
 
                 showToast("تم حفظ التسجيل الصوتي بنجاح! 🎙️");
@@ -755,15 +774,16 @@ async function toggleRecording() {
             isRecording = true;
             btnText.innerText = "إيقاف التسجيل";
             recordIcon.classList.add('fa-beat', 'text-white');
-            
+
             // إظهار صندوق المعاينة والأمواج والعداد
             visualizerContainer.classList.remove('hidden');
             playbackContainer.classList.add('hidden');
-            
+
             // بدء العداد الزمني
+            clearInterval(recordingInterval);
             secondsElapsed = 0;
             timerEl.textContent = "00:00";
-            timerInterval = setInterval(() => {
+            recordingInterval = setInterval(() => {
                 secondsElapsed++;
                 const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
                 const secs = String(secondsElapsed % 60).padStart(2, '0');
@@ -781,11 +801,11 @@ async function toggleRecording() {
         isRecording = false;
         btnText.innerText = "بدء التسجيل المستأنف";
         recordIcon.classList.remove('fa-beat', 'text-white');
-        
+
         // إيقاف العداد وإخفاء صندوق الأمواج الحية
-        clearInterval(timerInterval);
+        clearInterval(recordingInterval);
         visualizerContainer.classList.add('hidden');
-        
+
         // إيقاف استخدام الميكروفون
         mediaRecorder.stream.getTracks().forEach(track => track.stop());
     }
@@ -794,11 +814,10 @@ async function toggleRecording() {
 // دالة لتنظيم وتنسيق الردود وجعلها متناسقة مع المساحة بدون نجوم مزعجة
 function formatAiOutput(text) {
     if (!text) return '';
-    let clean = escapeHtml(text)
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-sky-300 font-bold">$1</strong>') // تحويل النجوم إلى خط عريض جميل
-        .replace(/---/g, '<hr class="border-gray-700 my-2">') // تحويل الخطوط المزعجة إلى فاصل أنيق
-        .replace(/[-*]\s+/g, '<br>• '); // تحويل النقاط لتظهر بشكل مرتب
-    return clean;
+    return escapeHtml(text)
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-sky-300 font-bold">$1</strong>') // تحويل النجوم إلى خط عريض
+        .replace(/^\s*-{3,}\s*$/gm, '<hr class="border-gray-700 my-2">')                   // فاصل أنيق
+        .replace(/^[-*]\s+/gm, '• ');                                                      // نقاط القوائم (في بداية السطر فقط)
 }
 
 // ==========================================
@@ -807,36 +826,34 @@ function formatAiOutput(text) {
 
 // عند الضغط على زر القائمة (الثلاث شرطات)
 function toggleMenu() {
-    // تعرض نافذة معلومات سريعة عن المنصة أو خيارات إضافية
     showToast("📚 منصة سفير القراءة - جاهزة لمساعدتك في التحدي!");
-    
-    // يمكنك فتح نافذة ترحيبية أو إظهار خيارات سريعة هنا
+
     const menuInfo = "أهلاً بك يا سفير القراءة.\n\nهذه المنصة تساعدك في:\n• إدارة كتبك وقراءاتك\n• تلخيص الكتب وتحليلها عبر الذكاء الاصطناعي\n• التدرب على الإلقاء الصوتي";
     alert(menuInfo);
 }
 
 // عند الضغط على زر الجرس (التنبيهات)
 function showNotifications() {
-    // عرض تنبيه تفاعلي لطيف للطالب
-    showToast("🔔 تذكير: لا تنسَ قراءة صفديات جديدة اليوم وتسجيل اقتباساتك!");
+    showToast("🔔 تذكير: لا تنسَ قراءة صفحات جديدة اليوم وتسجيل اقتباساتك!");
 }
 
 // ==========================================
 // مؤقت العد التنازلي لتسليم الجوازات
 // ==========================================
 function startPassportCountdown() {
-    // حدد هنا التاريخ والوقت المستهدف لتسليم الجوازات (يمكنك تغييره حسب موعد مدرستك أو التحدي)
-    const targetDate = new Date("April 5, 2027 23:59:5").getTime();
+    // التاريخ المستهدف: 5 أبريل 2027 الساعة 23:59:05 (الشهر يبدأ من 0، فـ 3 = أبريل)
+    const targetDate = new Date(2027, 3, 5, 23, 59, 5).getTime();
 
-    const timerInterval = setInterval(() => {
-        const now = new Date().getTime();
+    const countdownInterval = setInterval(() => {
+        const now = Date.now();
         const distance = targetDate - now;
 
         if (distance < 0) {
-            clearInterval(timerInterval);
+            clearInterval(countdownInterval);
             const container = document.getElementById('cd-days');
-            if(container) {
-                container.closest('.bg-\\[\\#1E293B\\]').innerHTML = `
+            const box = container ? container.closest('.bg-\\[\\#1E293B\\]') : null;
+            if (box) {
+                box.innerHTML = `
                     <h3 class="font-bold text-sm text-red-400 flex items-center justify-center gap-2 py-2">
                         <i class="fa-solid fa-triangle-exclamation"></i> انتهى وقت تسليم الجوازات الرسمية!
                     </h3>
@@ -845,13 +862,11 @@ function startPassportCountdown() {
             return;
         }
 
-        // حساب الأيام، الساعات، الدقائق، والثواني
         const days = Math.floor(distance / (1000 * 60 * 60 * 24));
         const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
         const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        // حقن القيم في الواجهة مع إضافة الصفر التبادلي (Padding)
         const dEl = document.getElementById('cd-days');
         const hEl = document.getElementById('cd-hours');
         const mEl = document.getElementById('cd-minutes');
@@ -878,7 +893,7 @@ function loadStudentNotes() {
     const listEl = document.getElementById('notes-list');
     if (!listEl) return;
 
-    const notes = JSON.parse(localStorage.getItem('student_notes') || '[]');
+    const notes = getNotes();
 
     if (notes.length === 0) {
         listEl.innerHTML = `<p class="text-center text-xs text-gray-400 py-4">لا توجد ملاحظات محفوظة حالياً. ابدأ بتدوين أفكارك!</p>`;
@@ -898,7 +913,7 @@ function loadStudentNotes() {
                 <h4 class="font-bold text-sm text-white pt-1">${escapeHtml(note.title)}</h4>
                 <p class="text-xs text-gray-300 leading-relaxed whitespace-pre-line">${escapeHtml(note.text)}</p>
                 <div class="flex justify-end pt-2 border-t border-gray-800/60">
-                    <button onclick="deleteStudentNote('${note.id}')" class="text-gray-400 hover:text-red-400 transition text-xs flex items-center gap-1 font-bold">
+                    <button onclick="deleteStudentNote('${escapeHtml(note.id)}')" class="text-gray-400 hover:text-red-400 transition text-xs flex items-center gap-1 font-bold">
                         <i class="fa-solid fa-trash-can"></i> حذف
                     </button>
                 </div>
@@ -918,17 +933,15 @@ function saveStudentNote() {
         return;
     }
 
-    const notes = JSON.parse(localStorage.getItem('student_notes') || '[]');
-    const newNote = {
+    const notes = getNotes();
+    notes.unshift({
         id: 'note_' + Date.now(),
         title: title,
         category: category,
         text: text,
         date: new Date().toLocaleDateString('ar-SA')
-    };
-
-    notes.unshift(newNote);
-    localStorage.setItem('student_notes', JSON.stringify(notes));
+    });
+    setNotes(notes);
 
     // تفريغ الحقول
     document.getElementById('note-title').value = '';
@@ -940,9 +953,7 @@ function saveStudentNote() {
 
 function deleteStudentNote(id) {
     if (!confirm("هل أنت متأكد من حذف هذه الملاحظة؟")) return;
-    let notes = JSON.parse(localStorage.getItem('student_notes') || '[]');
-    notes = notes.filter(n => n.id !== id);
-    localStorage.setItem('student_notes', JSON.stringify(notes));
+    setNotes(getNotes().filter(n => n.id !== id));
     loadStudentNotes();
     showToast("تم حذف الملاحظة.");
 }
@@ -953,7 +964,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================
-// التحكم القراءة الصوتية الآلية (Text-to-Speech Control)
+// التحكم بالقراءة الصوتية الآلية (Text-to-Speech Control)
 // ==========================================
 
 let currentUtterance = null;
@@ -968,41 +979,38 @@ function updateSpeedLabel(val) {
 
 // دالة تشغيل القراءة الصوتية بالسرعة المحددة
 function speakTextCustom(textToRead = null) {
-    // إلغاء أي قراءة سابقة شغال حالياً
+    if (!('speechSynthesis' in window)) {
+        showToast("متصفحك لا يدعم القراءة الصوتية.");
+        return;
+    }
+
+    // إلغاء أي قراءة سابقة
     window.speechSynthesis.cancel();
 
-    // جلب النص (إما النص الممرر أو النص الموجود في حاوية التلخيص)
-    const text = textToRead || document.getElementById('summary-output')?.innerText || "أهلاً بك في منصة سفير القراءة";
-    
+    // النص الممرر، أو النص الموجود في حاوية التلخيص
+    const text = (typeof textToRead === 'string' && textToRead)
+        ? textToRead
+        : (document.getElementById('summary-output')?.innerText || "أهلاً بك في منصة سفير القراءة");
+
     if (!text || text.trim() === "") {
         showToast("لا يوجد نص حالي لقراءته.");
         return;
     }
 
     currentUtterance = new SpeechSynthesisUtterance(text);
-    
-    // ضبط اللغة العربية
     currentUtterance.lang = 'ar-SA';
 
-    // جلب السرعة من شريط التحكم
     const rateInput = document.getElementById('speech-rate');
-    if (rateInput) {
-        currentUtterance.rate = parseFloat(rateInput.value);
-    } else {
-        currentUtterance.rate = 1.0;
-    }
-
-    // ضبط نبرة الصوت
+    currentUtterance.rate = rateInput ? parseFloat(rateInput.value) || 1.0 : 1.0;
     currentUtterance.pitch = 1.0;
 
-    // البدء بالنطق
     window.speechSynthesis.speak(currentUtterance);
     showToast("جاري القراءة الصوتية... 🔊");
 }
 
 // دالة إيقاف القراءة الصوتية
 function stopSpeechCustom() {
-    if (window.speechSynthesis.speaking) {
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
         showToast("تم إيقاف القراءة الصوتية.");
     }
