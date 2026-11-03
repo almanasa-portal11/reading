@@ -152,7 +152,32 @@ const SYSTEM_PROMPT = `أنت مساعد ذكي ومدرب أدبي متخصص �
 - اجعل طول الإجابة متناسباً مع السؤال: قصيرة للأسئلة البسيطة، ومفصّلة قليلاً للتلخيص أو التحليل.
 - عند تصحيح الأخطاء اللغوية، اذكر الخطأ ثم الصواب مع سبب مختصر.`;
 
-let chatHistory = [];     // سجل المحادثة لإعطاء المساعد سياقاً
+const CHAT_KEY = 'safir_chat_history';
+
+function loadChatHistory() {
+    try {
+        const h = JSON.parse(localStorage.getItem(CHAT_KEY));
+        return Array.isArray(h) ? h : [];
+    } catch { return []; }
+}
+
+function saveChatHistory() {
+    try { localStorage.setItem(CHAT_KEY, JSON.stringify(chatHistory.slice(-60))); } catch (e) {}
+}
+
+function renderChatHistory() {
+    chatHistory.forEach(m => appendMessage(m.content, m.role === 'user' ? 'user' : 'bot'));
+}
+
+function clearChat() {
+    if (!confirm("هل تريد مسح سجل المحادثة بالكامل؟")) return;
+    chatHistory = [];
+    localStorage.removeItem(CHAT_KEY);
+    const box = document.getElementById('chat-box');
+    while (box && box.children.length > 1) box.removeChild(box.lastChild); // يبقي رسالة الترحيب
+}
+
+let chatHistory = loadChatHistory();   // سجل المحادثة لإعطاء المساعد سياقاً
 let isSending = false;    // منع الإرسال المزدوج
 
 async function sendMessage() {
@@ -179,6 +204,7 @@ async function sendMessage() {
 
         chatHistory.push({ role: "user", content: text });
         chatHistory.push({ role: "assistant", content: reply });
+        saveChatHistory();
 
         removeTypingIndicator();
         appendMessage(reply, 'bot');
