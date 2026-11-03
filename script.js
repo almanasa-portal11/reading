@@ -128,7 +128,7 @@ async function askAI(messages) {
 
     if (!res.ok || (data && data.error)) {
         const serverMsg = data?.error?.message || `HTTP ${res.status}`;
-        if (res.status === 401) throw new Error("المفتاح غير صالح أو ملغي. أنشئ مفتاحاً جديداً. (" + serverMsg + ")");
+        if (res.status === 401) throw new Error("الخدمة غير متاحة حالياً، حاول مجددا.");
         if (res.status === 429) throw new Error("تم تجاوز حد الطلبات، انتظر قليلاً ثم حاول مرة أخرى.");
         throw new Error(serverMsg);
     }
@@ -232,11 +232,12 @@ function appendMessage(text, sender) {
 
     if (sender === 'user') {
         msgDiv.className = "bg-sky-600 text-white p-3 rounded-2xl rounded-tl-none max-w-[85%] self-end text-xs leading-relaxed shadow whitespace-pre-line";
+        msgDiv.textContent = text; // textContent آمن
     } else {
         msgDiv.className = "bg-[#0F141C] border border-gray-800 p-3 rounded-2xl rounded-tr-none max-w-[85%] self-start text-xs text-gray-200 leading-relaxed shadow whitespace-pre-line";
+        msgDiv.innerHTML = formatAiOutput(text); // formatAiOutput تنظّف النص أولاً ثم تنسّقه
     }
 
-    msgDiv.textContent = text; // textContent آمن
     chatBox.appendChild(msgDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
 }
@@ -580,6 +581,9 @@ ${text}
         // عرض رد الذكاء الاصطناعي (reply) داخل صندوق النتيجة (outputDiv)
         outputDiv.innerHTML = formatAiOutput(reply);
 
+        // حفظ التحليل في سجل المختبر
+        saveAnalysisEntry(bookTitle, text, reply);
+
     } catch (error) {
         console.error("AI Analysis Error:", error);
         outputDiv.textContent = "⚠️ " + (error.message || "تعذر الاتصال بخدمة التحليل الذكي.");
@@ -607,6 +611,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchSheetBooks();
     loadUserBooks();
     updateHomeStats();
+    renderChatHistory();       // إظهار المحادثة المحفوظة
+    renderAnalysisHistory();   // إظهار سجل التحليلات المحفوظ
 });
 
 // ==========================================
@@ -1007,6 +1013,10 @@ function showNotifications() {
     showToast("🔔 تذكير: لا تنسَ قراءة صفحات جديدة اليوم وتسجيل اقتباساتك!");
 }
 
+// ==========================================
+// سجل المختبر (التحليلات السابقة)
+// ==========================================
+
 const ANALYSIS_KEY = 'safir_analysis_history';
 
 function getAnalysisHistory() {
@@ -1255,6 +1265,9 @@ function stopSpeechCustom() {
     }
 }
 
+// ==========================================
+// تسجيل Service Worker (لتثبيت الموقع كتطبيق)
+// ==========================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(err => console.error('SW Error:', err));
