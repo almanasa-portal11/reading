@@ -1007,6 +1007,67 @@ function showNotifications() {
     showToast("🔔 تذكير: لا تنسَ قراءة صفحات جديدة اليوم وتسجيل اقتباساتك!");
 }
 
+const ANALYSIS_KEY = 'safir_analysis_history';
+
+function getAnalysisHistory() {
+    try {
+        const h = JSON.parse(localStorage.getItem(ANALYSIS_KEY));
+        return Array.isArray(h) ? h : [];
+    } catch { return []; }
+}
+
+function saveAnalysisEntry(title, text, result) {
+    const list = getAnalysisHistory();
+    list.unshift({ id: Date.now(), title, text, result, date: new Date().toLocaleDateString('ar-SA') });
+    try { localStorage.setItem(ANALYSIS_KEY, JSON.stringify(list.slice(0, 30))); } catch (e) {}
+    renderAnalysisHistory();
+}
+
+function renderAnalysisHistory() {
+    const el = document.getElementById('analysis-history-list');
+    if (!el) return;
+    const list = getAnalysisHistory();
+
+    if (list.length === 0) {
+        el.innerHTML = `<p class="text-center text-[11px] text-gray-500 py-3">لا توجد تحليلات سابقة بعد.</p>`;
+        return;
+    }
+
+    el.innerHTML = list.map(item => `
+        <details class="bg-[#1E293B] rounded-xl border border-gray-800 p-3 shadow">
+            <summary class="cursor-pointer flex justify-between items-center text-xs gap-2">
+                <span class="font-bold text-white">${escapeHtml(item.title)}</span>
+                <span class="text-[10px] text-gray-400">${escapeHtml(item.date)}</span>
+            </summary>
+            <div class="mt-3 space-y-3">
+                <div>
+                    <p class="text-[10px] text-sky-400 font-bold mb-1">ملخصك:</p>
+                    <p class="text-[11px] text-gray-300 whitespace-pre-line bg-[#0F141C] p-2 rounded-lg">${escapeHtml(item.text)}</p>
+                </div>
+                <div>
+                    <p class="text-[10px] text-amber-400 font-bold mb-1">تقييم اللجنة:</p>
+                    <div class="text-[11px] text-gray-200 whitespace-pre-line bg-[#0F141C] p-2 rounded-lg">${formatAiOutput(item.result)}</div>
+                </div>
+                <button onclick="deleteAnalysisEntry(${Number(item.id)})" class="text-[11px] text-red-400 hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> حذف
+                </button>
+            </div>
+        </details>
+    `).join('');
+}
+
+function deleteAnalysisEntry(id) {
+    if (!confirm("هل تريد حذف هذا التحليل من السجل؟")) return;
+    localStorage.setItem(ANALYSIS_KEY, JSON.stringify(getAnalysisHistory().filter(i => i.id !== id)));
+    renderAnalysisHistory();
+}
+
+function clearAnalysisHistory() {
+    if (!confirm("هل تريد مسح كل التحليلات السابقة؟")) return;
+    localStorage.removeItem(ANALYSIS_KEY);
+    renderAnalysisHistory();
+}
+
 // ==========================================
 // مؤقت العد التنازلي لتسليم الجوازات
 // ==========================================
