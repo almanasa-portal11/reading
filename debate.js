@@ -4,7 +4,7 @@
 // ==========================================
 
 // رابط Apps Script بعد النشر (Deploy ← Web app)
-const DEBATE_API = "ضع_رابط_Apps_Script_هنا";
+const DEBATE_API = "https://script.google.com/macros/s/AKfycbxijTtKKCqF4sBpmuE7IfoKYKdxZOkqj0Z57bR1NqbH3Z-ZpwzZXHewHou3RkkTbXHgYA/exec";
 
 let debateState = null;
 let debateFilter = 'all';
