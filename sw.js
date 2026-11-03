@@ -1,6 +1,6 @@
 // Service Worker - منصة سفير القراءة
 // عند أي تعديل كبير على الملفات، غيّر رقم النسخة ليتحدث الكاش عند المستخدمين
-const CACHE_NAME = 'safir-v3';
+const CACHE_NAME = 'safir-v4';
 
 const APP_SHELL = [
   './',
