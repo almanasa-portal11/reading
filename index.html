@@ -141,6 +141,11 @@
                         <span class="text-[11px] font-bold text-gray-200">المناظرة</span>
                     </button>
                 </div>
+                <button onclick="openInterviewLab('practice')" class="w-full mt-2 bg-gradient-to-l from-emerald-600/30 to-sky-600/20 hover:from-emerald-600/40 border border-emerald-500/30 p-3 rounded-xl flex items-center gap-3 text-right">
+                    <i class="fa-solid fa-user-tie text-emerald-400 text-xl"></i>
+                    <span class="flex-1"><span class="block text-xs font-bold text-white">تدرّب على أسئلة المقابلة</span><span class="block text-[10px] text-gray-400">بنك أسئلة + مؤقت دقيقة + تقييم كلجنة التحكيم</span></span>
+                    <i class="fa-solid fa-chevron-left text-gray-500 text-xs"></i>
+                </button>
             </div>
         </div>
 
@@ -429,6 +434,52 @@
 
                 <div id="audio-playback-container" class="pt-2 hidden">
                     <!-- سيظهر هنا مشغل الصوت للتسجيل الذي سجلته -->
+                </div>
+            </div>
+            <!-- ===== مدرّب المقابلة: بنك الأسئلة + وضع التدريب + معايير اللجنة ===== -->
+            <div id="interview-lab" class="bg-[#1E293B] p-4 rounded-2xl border border-gray-800 space-y-3 shadow-lg">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-bold text-sm text-emerald-400 flex items-center gap-2"><i class="fa-solid fa-user-tie"></i> مدرّب المقابلة</h3>
+                    <span id="iv-progress" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-bold">0/25</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1 bg-[#0F141C] p-1 rounded-xl text-[11px] font-bold">
+                    <button id="iv-tab-bank" onclick="ivSetView('bank')" class="py-2 rounded-lg">بنك الأسئلة</button>
+                    <button id="iv-tab-practice" onclick="ivSetView('practice')" class="py-2 rounded-lg">تدرّب الآن</button>
+                    <button id="iv-tab-rubric" onclick="ivSetView('rubric')" class="py-2 rounded-lg">معايير اللجنة</button>
+                </div>
+
+                <!-- بنك الأسئلة -->
+                <div id="iv-view-bank" class="space-y-2">
+                    <div id="iv-cats" class="flex gap-2 overflow-x-auto pb-1"></div>
+                    <div id="iv-list" class="space-y-2"></div>
+                </div>
+
+                <!-- وضع التدريب -->
+                <div id="iv-view-practice" class="space-y-3 hidden">
+                    <button onclick="ivRandom()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"><i class="fa-solid fa-shuffle"></i> سؤال عشوائي</button>
+                    <div id="iv-question-box" class="bg-[#0F141C] border border-gray-800 rounded-xl p-3 text-xs text-gray-400 leading-relaxed">اضغط «سؤال عشوائي» لتبدأ المقابلة التجريبية.</div>
+                    <div id="iv-timer-wrap" class="hidden space-y-1.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-gray-400">وقت الإجابة</span>
+                            <span id="iv-timer" class="font-mono font-bold text-emerald-400 text-sm">01:00</span>
+                        </div>
+                        <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden"><div id="iv-bar" class="h-full bg-emerald-400 transition-all duration-1000 ease-linear" style="width:100%"></div></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="ivListen()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 text-[11px] font-bold py-2 rounded-xl"><i class="fa-solid fa-volume-high"></i> اسمع السؤال</button>
+                        <button onclick="ivStart()" class="bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-bold py-2 rounded-xl"><i class="fa-solid fa-stopwatch"></i> ابدأ الدقيقة</button>
+                        <button id="iv-rec-btn" onclick="ivRecord()" class="bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold py-2 rounded-xl"><i class="fa-solid fa-microphone"></i> سجّل صوتك</button>
+                    </div>
+                    <p class="text-[10px] text-gray-500">التسجيل الصوتي يظهر مشغّله في بطاقة التسجيل أعلاه. وللتقييم الذكي اكتب إجابتك هنا:</p>
+                    <textarea id="iv-answer" rows="4" placeholder="اكتب إجابتك كما ستقولها للجنة..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-emerald-400 resize-none"></textarea>
+                    <button id="iv-eval-btn" onclick="ivEvaluate()" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"><i class="fa-solid fa-gavel"></i> قيّمني كلجنة التحكيم</button>
+                    <div id="iv-result" class="hidden text-xs text-gray-200 leading-relaxed bg-[#0F141C] p-3 rounded-xl border border-gray-800 whitespace-pre-line"></div>
+                </div>
+
+                <!-- معايير اللجنة -->
+                <div id="iv-view-rubric" class="space-y-2 hidden">
+                    <p class="text-[11px] text-gray-400">معايير نموذج التحكيم الرسمي (الموسم الحادي عشر) — المجموع 100 درجة:</p>
+                    <div id="iv-rubric" class="space-y-1.5"></div>
                 </div>
             </div>
         </div>
