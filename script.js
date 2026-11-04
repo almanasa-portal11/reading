@@ -1273,3 +1273,210 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').catch(err => console.error('SW Error:', err));
     });
 }
+
+// ==========================================
+// مدرّب المقابلة: بنك الأسئلة + وضع التدريب + معايير التحكيم
+// ==========================================
+const IV_CATS = ['الكتاب', 'الشخصيات والأفكار', 'الأثر الشخصي', 'المؤلف والتنوع', 'أسئلة عامة'];
+
+// معايير التحكيم الرسمية (نموذج التحكيم الموحد)
+const IV_RUBRIC = [
+    { n: 1, t: 'عرض الكتاب وتحديد الأفكار الرئيسية والفرعية', m: 10 },
+    { n: 2, t: 'الدروس المستفادة والربط بالواقع', m: 5 },
+    { n: 3, t: 'تحديد عناوين أخرى للكتاب', m: 3 },
+    { n: 4, t: 'التراكيب واللغة', m: 10 },
+    { n: 5, t: 'التدفق والوضوح', m: 10 },
+    { n: 6, t: 'الأسلوب الخطابي والإعلامي', m: 10 },
+    { n: 7, t: 'القراءة الناقدة', m: 20 },
+    { n: 8, t: 'لغة الجسد', m: 7 },
+    { n: 9, t: 'الثقة بالنفس', m: 10 },
+    { n: 10, t: 'الحضور والشخصية (الكاريزما)', m: 10 },
+    { n: 11, t: 'التنوع والمعلومات المكتبية', m: 5 }
+];
+
+// الأسئلة تُكتب هنا مرة واحدة: c = الفئة، q = السؤال، h = كيف تجيب، l = ما تبحث عنه اللجنة، k = رقم المعيار
+const IV_QUESTIONS = [
+    { c: 0, q: 'لخّص لنا فكرة الكتاب في دقيقة واحدة.', h: 'ابدأ بجملة تلخّص الفكرة العامة، ثم اذكر 2–3 أفكار رئيسية، واختم بما استفدته.', l: 'عرضاً منظماً يفرّق بين الفكرة الأساسية والتفاصيل.', k: 1 },
+    { c: 0, q: 'ما الفكرة الرئيسية للكتاب؟ وما الأفكار الفرعية التي تدعمها؟', h: 'اذكر الفكرة الأساسية أولاً ثم رتّب الفرعية كأنها أعمدة تسندها.', l: 'قدرتك على التمييز بين الأساسي والفرعي.', k: 1 },
+    { c: 0, q: 'لماذا اختار المؤلف هذا العنوان؟ وما عنوان آخر تقترحه؟', h: 'اربط العنوان بمضمون الكتاب، ثم اقترح عنواناً مختلفاً غير مكرر مع سبب اختيارك.', l: 'عنواناً مناسباً مختلفاً عن الأصلي، مع تعليل.', k: 3 },
+    { c: 0, q: 'كيف بدأ الكتاب وكيف انتهى؟', h: 'صِف المقدمة والخاتمة بترتيب منطقي دون قفز بين الأفكار.', l: 'تسلسلاً واضحاً وانتقالاً سلساً.', k: 5 },
+    { c: 0, q: 'ما أهم الدروس التي استفدتها من الكتاب؟ وكيف تطبّقها؟', h: 'اذكر 4–5 دروس، وأوضح كل درس بمثال من واقعك.', l: 'عدد الدروس مع توضيحها وربطها بالواقع.', k: 2 },
+
+    { c: 1, q: 'ما رأيك في الشخصية الرئيسية؟ هل اتفقت مع تصرفاتها؟', h: 'أبدِ رأيك بوضوح مع دليل من الكتاب، ولا تخف من الاختلاف بأدب.', l: 'رأياً شخصياً معلَّلاً وليس سرداً للأحداث.', k: 7 },
+    { c: 1, q: 'لو كنت مكان بطل الكتاب، ماذا كنت ستفعل؟', h: 'قارن قرارك بقراره، وبيّن سبب الاختلاف.', l: 'تفكيراً مستقلاً وقدرة على التحليل.', k: 7 },
+    { c: 1, q: 'هل كانت أحداث الكتاب متوقعة؟ وما أكثر ما فاجأك؟', h: 'حدّد حدثاً بعينه واشرح لماذا لم تتوقعه.', l: 'تفاعلاً حقيقياً مع النص.', k: 7 },
+    { c: 1, q: 'هل غيّر الكتاب نظرتك إلى موضوع ما؟', h: 'قل ما كانت نظرتك قبل القراءة وما صارت بعدها.', l: 'تحولاً فكرياً واضحاً.', k: 7 },
+    { c: 1, q: 'ما الفكرة في الكتاب التي لم تقتنع بها؟ ولماذا؟', h: 'اعرض الفكرة، ثم حجتك المضادة بهدوء واحترام.', l: 'نقداً متزناً مبنياً على حجة.', k: 7 },
+
+    { c: 2, q: 'ما أثر هذا الكتاب فيك؟', h: 'ابدأ بمثال محدد: موقف أو قرار أو عادة تغيّرت بسببه.', l: 'أثراً صادقاً وملموساً، لا عبارات عامة.', k: 9 },
+    { c: 2, q: 'كيف غيّر الكتاب سلوكك أو تفكيرك؟', h: 'اذكر سلوكاً قبل وبعد، بجملتين واضحتين.', l: 'ربطاً حقيقياً بين القراءة وحياتك.', k: 2 },
+    { c: 2, q: 'لمن توصي بقراءة هذا الكتاب ولماذا؟', h: 'حدّد فئة (أصدقاء، أسرة، طلاب) وقدّم سببين.', l: 'فهمك لقيمة الكتاب وجمهوره.', k: 6 },
+    { c: 2, q: 'ما أجمل اقتباس أو فكرة علقت في ذهنك؟ ولماذا؟', h: 'اذكر الاقتباس باختصار ثم فسّر سبب تأثيره فيك.', l: 'ذاكرة جيدة وذوقاً أدبياً وتعليلاً.', k: 7 },
+    { c: 2, q: 'ما الدرس الذي ستنقله إلى زملائك؟', h: 'اختر درساً واحداً واشرحه بطريقة مشوّقة.', l: 'قدرتك على التأثير في الآخرين.', k: 10 },
+
+    { c: 3, q: 'من هو مؤلف الكتاب؟ وما الذي يميّز أسلوبه؟', h: 'اذكر اسم المؤلف وجنسيته وأهم أعماله بإيجاز، ثم صِف أسلوبه.', l: 'معرفة بالمؤلف وبما كتب.', k: 11 },
+    { c: 3, q: 'لماذا اخترت هذا الكتاب تحديداً؟', h: 'اذكر ميلك للموضوع، وكيف وجدته (مكتبة، صديق، معلم).', l: 'اختياراً واعياً ينسجم مع ميولك.', k: 11 },
+    { c: 3, q: 'ما أنواع الكتب التي قرأتها في التحدي؟', h: 'اذكر 4 مجالات أو أكثر: علمي، تاريخي، قصصي، سير، تنمية ذاتية.', l: 'تنوعاً في المجالات والمؤلفين.', k: 11 },
+    { c: 3, q: 'اذكر ثلاثة مؤلفين قرأت لهم. ما الذي ميّز كل واحد؟', h: 'جملة واحدة لكل مؤلف: الاسم، الكتاب، والميزة.', l: 'معرفة بأسماء المؤلفين وسرعة استحضارها.', k: 11 },
+    { c: 3, q: 'ما أصعب كتاب قرأته؟ وكيف تعاملت مع صعوبته؟', h: 'كن صريحاً، واذكر الاستراتيجية التي ساعدتك.', l: 'مثابرة وصدقاً.', k: 9 },
+
+    { c: 4, q: 'لماذا تحب القراءة؟', h: 'اروِ قصة قصيرة عن أول كتاب أحببته.', l: 'شغفاً حقيقياً وليس إجابة محفوظة.', k: 10 },
+    { c: 4, q: 'كيف نظّمت وقتك لقراءة خمسين كتاباً؟', h: 'اذكر عادات عملية: وقت ثابت، عدد صفحات يومي.', l: 'التزاماً وانضباطاً.', k: 9 },
+    { c: 4, q: 'كيف تختار كتابك التالي؟', h: 'اذكر معاييرك: الموضوع، توصية، حجم الكتاب.', l: 'وعياً بقراءاتك.', k: 11 },
+    { c: 4, q: 'القراءة الورقية أم الإلكترونية، أيهما تفضّل ولماذا؟', h: 'اختر موقفاً وادعمه بمثال، ويمكنك ذكر مزايا الطرفين.', l: 'رأياً معلَّلاً بأسلوب منظم.', k: 5 },
+    { c: 4, q: 'كيف تشجّع زملاءك على القراءة؟', h: 'قدّم فكرتين عمليتين مجرّبتين.', l: 'مبادرة وشخصية قيادية.', k: 10 }
+];
+
+let ivView = 'bank', ivCat = -1, ivCurrent = -1, ivTimerId = null, ivLeft = 60, ivBusy = false;
+const IV_KEY = 'safir_iv_done';
+
+function ivDone() { try { return JSON.parse(localStorage.getItem(IV_KEY)) || []; } catch { return []; } }
+function ivMark(i) {
+    const d = ivDone();
+    if (!d.includes(i)) { d.push(i); try { localStorage.setItem(IV_KEY, JSON.stringify(d)); } catch { } }
+    ivUpdateProgress();
+}
+function ivUpdateProgress() {
+    const el = document.getElementById('iv-progress');
+    if (el) el.textContent = ivDone().length + '/' + IV_QUESTIONS.length;
+}
+
+function ivSetView(v) {
+    ivView = v;
+    ['bank', 'practice', 'rubric'].forEach(x => {
+        document.getElementById('iv-view-' + x).classList.toggle('hidden', x !== v);
+        const b = document.getElementById('iv-tab-' + x);
+        b.className = 'py-2 rounded-lg ' + (x === v ? 'bg-emerald-500 text-white' : 'text-gray-400');
+    });
+    if (v === 'bank') ivRenderBank();
+    if (v === 'rubric') ivRenderRubric();
+}
+
+function ivRenderBank() {
+    const cats = document.getElementById('iv-cats');
+    const all = ['الكل', ...IV_CATS];
+    cats.innerHTML = all.map((c, i) => `<button onclick="ivPickCat(${i - 1})" class="whitespace-nowrap px-3 py-1.5 rounded-full text-[11px] font-bold border ${ivCat === i - 1 ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-[#0F141C] text-gray-400 border-gray-800'}">${c}</button>`).join('');
+    const done = ivDone();
+    document.getElementById('iv-list').innerHTML = IV_QUESTIONS.map((x, i) => ({ x, i })).filter(o => ivCat < 0 || o.x.c === ivCat).map(({ x, i }) => `
+        <div class="bg-[#0F141C] border border-gray-800 rounded-xl overflow-hidden">
+            <button onclick="ivToggle(${i})" class="w-full flex items-center justify-between gap-2 p-3 text-right">
+                <span class="text-xs font-bold text-gray-200 leading-relaxed">${done.includes(i) ? '<i class="fa-solid fa-circle-check text-emerald-400 ml-1"></i>' : ''}${escapeHtml(x.q)}</span>
+                <i id="iv-chev-${i}" class="fa-solid fa-chevron-down text-gray-500 text-[10px] transition"></i>
+            </button>
+            <div id="iv-body-${i}" class="hidden px-3 pb-3 space-y-2 text-[11px] leading-relaxed">
+                <p><span class="font-bold text-sky-400">كيف تجيب؟</span> <span class="text-gray-300">${escapeHtml(x.h)}</span></p>
+                <p><span class="font-bold text-amber-400">ماذا تبحث اللجنة؟</span> <span class="text-gray-300">${escapeHtml(x.l)}</span></p>
+                <div class="flex items-center justify-between pt-1">
+                    <span class="text-[10px] bg-gray-800 text-gray-400 px-2 py-0.5 rounded-full">معيار ${x.k}: ${escapeHtml(IV_RUBRIC[x.k - 1].t)}</span>
+                    <button onclick="ivPractice(${i})" class="text-[11px] font-bold text-emerald-400">تدرّب عليه <i class="fa-solid fa-arrow-left"></i></button>
+                </div>
+            </div>
+        </div>`).join('');
+}
+function ivPickCat(c) { ivCat = c; ivRenderBank(); }
+function ivToggle(i) {
+    document.getElementById('iv-body-' + i).classList.toggle('hidden');
+    document.getElementById('iv-chev-' + i).classList.toggle('rotate-180');
+}
+
+function ivRenderRubric() {
+    document.getElementById('iv-rubric').innerHTML = IV_RUBRIC.map(r => `
+        <div class="flex items-center justify-between bg-[#0F141C] border border-gray-800 rounded-xl px-3 py-2 text-xs">
+            <span class="text-gray-200"><span class="text-emerald-400 font-bold ml-1">${r.n}.</span>${escapeHtml(r.t)}</span>
+            <span class="font-mono font-bold text-amber-400">${r.m}</span>
+        </div>`).join('');
+}
+
+function ivPractice(i) {
+    ivSetView('practice');
+    ivCurrent = i;
+    ivStop();
+    const x = IV_QUESTIONS[i];
+    document.getElementById('iv-question-box').innerHTML = `<span class="text-[10px] text-emerald-400 font-bold block mb-1">${IV_CATS[x.c]}</span><span class="text-sm font-bold text-white leading-relaxed">${escapeHtml(x.q)}</span>`;
+    document.getElementById('iv-answer').value = '';
+    document.getElementById('iv-result').classList.add('hidden');
+    document.getElementById('iv-timer-wrap').classList.add('hidden');
+}
+function ivRandom() {
+    const pool = IV_QUESTIONS.map((_, i) => i).filter(i => i !== ivCurrent);
+    ivPractice(pool[Math.floor(Math.random() * pool.length)]);
+}
+
+function ivFmt(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+function ivStop() { clearInterval(ivTimerId); ivTimerId = null; }
+function ivStart() {
+    if (ivCurrent < 0) { showToast('اختر سؤالاً أولاً'); return; }
+    ivStop();
+    ivLeft = 60;
+    const wrap = document.getElementById('iv-timer-wrap'), t = document.getElementById('iv-timer'), bar = document.getElementById('iv-bar');
+    wrap.classList.remove('hidden');
+    t.textContent = ivFmt(ivLeft); t.className = 'font-mono font-bold text-emerald-400 text-sm';
+    bar.style.transition = 'none'; bar.style.width = '100%'; bar.className = 'h-full bg-emerald-400';
+    void bar.offsetWidth; bar.style.transition = '';
+    ivMark(ivCurrent);
+    ivTimerId = setInterval(() => {
+        ivLeft--;
+        t.textContent = ivFmt(ivLeft);
+        bar.style.width = (ivLeft / 60 * 100) + '%';
+        if (ivLeft <= 10) { t.classList.replace('text-emerald-400', 'text-red-400'); bar.classList.replace('bg-emerald-400', 'bg-red-400'); }
+        if (ivLeft <= 0) {
+            ivStop();
+            if (isRecording) ivRecord();
+            showToast('انتهى الوقت ⏱️');
+        }
+    }, 1000);
+}
+
+function ivListen() {
+    if (ivCurrent < 0) { showToast('اختر سؤالاً أولاً'); return; }
+    speakArabic(IV_QUESTIONS[ivCurrent].q, { rate: 0.95 });
+}
+async function ivRecord() {
+    await toggleRecording(); // نستخدم المسجّل الموجود، ويظهر المشغّل في بطاقة التسجيل
+    const b = document.getElementById('iv-rec-btn');
+    if (b) b.innerHTML = isRecording ? '<i class="fa-solid fa-stop"></i> إيقاف' : '<i class="fa-solid fa-microphone"></i> سجّل صوتك';
+}
+
+async function ivEvaluate() {
+    if (ivBusy) return;
+    const ans = document.getElementById('iv-answer').value.trim();
+    const out = document.getElementById('iv-result');
+    if (ivCurrent < 0) { showToast('اختر سؤالاً أولاً'); return; }
+    if (ans.length < 20) { showToast('اكتب إجابة أطول قليلاً'); return; }
+    ivBusy = true;
+    out.classList.remove('hidden');
+    out.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-400"></i> اللجنة تستمع إلى إجابتك...';
+    ivMark(ivCurrent);
+    const x = IV_QUESTIONS[ivCurrent];
+    const prompt = `سؤال المقابلة: "${x.q}"
+إجابة الطالب:
+"""
+${ans}
+"""
+قيّم الإجابة وفق معايير التحكيم الرسمية التالية، وأعطِ لكل معيار درجة مع سطر تعليل قصير:
+- عرض الكتاب وتحديد الأفكار الرئيسية والفرعية (من 10)
+- الدروس المستفادة والربط بالواقع (من 5)
+- التراكيب واللغة (من 10)
+- التدفق والوضوح (من 10)
+- الأسلوب الخطابي (من 10)
+- القراءة الناقدة (من 20)
+- الثقة بالنفس من خلال صياغة الإجابة (من 10)
+إن كان المعيار لا ينطبق على هذا السؤال فاكتب «لا ينطبق» ولا تحسبه. ثم اكتب المجموع، وبعده: نقطة قوة واحدة، ونقطتا تحسين، ثم صياغة محسّنة لجملة الافتتاح. كن موجزاً ومشجعاً.`;
+    try {
+        const reply = await askAI([
+            { role: 'system', content: "أنت عضو لجنة تحكيم في مسابقة 'تحدي القراءة العربي'. أجب بالعربية الفصحى المبسطة وبإيجاز." },
+            { role: 'user', content: prompt }
+        ]);
+        out.innerHTML = formatAiOutput(reply);
+    } catch (e) {
+        out.textContent = '⚠️ ' + (e.message || 'تعذر الاتصال بلجنة التحكيم.');
+    } finally { ivBusy = false; }
+}
+
+function openInterviewLab(view) {
+    switchTab('audio');
+    ivSetView(view || 'bank');
+    setTimeout(() => document.getElementById('interview-lab').scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
+
+document.addEventListener('DOMContentLoaded', () => { ivSetView('bank'); ivUpdateProgress(); });
