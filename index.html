@@ -327,7 +327,7 @@
                 <h3 class="font-bold text-sm text-amber-400 flex items-center gap-2">
                     <i class="fa-solid fa-star"></i> تقرير لجنة التحكيم الافتراضية
                 </h3>
-                <div id="analysis-output" class="text-xs text-gray-200 leading-relaxed bg-[#0F141C] p-3 rounded-xl border border-gray-800 whitespace-pre-line">
+                <div id="analysis-output" class="text-xs text-gray-200 leading-relaxed bg-[#0F141C] p-3 rounded-xl border border-gray-800">
                     <!-- سيتم عرض التقييم هنا -->
                 </div>
             </div>
@@ -471,9 +471,10 @@
                         <button id="iv-rec-btn" onclick="ivRecord()" class="bg-red-500 hover:bg-red-600 text-white text-[11px] font-bold py-2 rounded-xl"><i class="fa-solid fa-microphone"></i> سجّل صوتك</button>
                     </div>
                     <p class="text-[10px] text-gray-500">التسجيل الصوتي يظهر مشغّله في بطاقة التسجيل أعلاه. وللتقييم الذكي اكتب إجابتك هنا:</p>
-                    <textarea id="iv-answer" rows="4" placeholder="اكتب إجابتك كما ستقولها للجنة..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-emerald-400 resize-none"></textarea>
+                    <input id="iv-book" type="text" maxlength="80" placeholder="اسم الكتاب الذي تتحدث عنه (مهم لدقة التقييم)" class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-emerald-400">
+                    <textarea id="iv-answer" rows="5" maxlength="1500" placeholder="اكتب إجابتك كما ستقولها للجنة..." class="w-full bg-[#0F141C] border border-gray-800 text-white text-xs rounded-xl p-3 focus:outline-none focus:border-emerald-400 resize-none"></textarea>
                     <button id="iv-eval-btn" onclick="ivEvaluate()" class="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold py-2.5 rounded-xl flex items-center justify-center gap-2"><i class="fa-solid fa-gavel"></i> قيّمني كلجنة التحكيم</button>
-                    <div id="iv-result" class="hidden text-xs text-gray-200 leading-relaxed bg-[#0F141C] p-3 rounded-xl border border-gray-800 whitespace-pre-line"></div>
+                    <div id="iv-result" class="hidden text-xs text-gray-200 leading-relaxed bg-[#0F141C] p-3 rounded-xl border border-gray-800"></div>
                 </div>
 
                 <!-- معايير اللجنة -->
@@ -553,7 +554,7 @@
             <i class="fa-solid fa-brain text-lg mb-1"></i><span>التحليل</span>
         </button>
         <button onclick="switchTab('audio')" id="nav-audio" class="flex flex-col items-center hover:text-sky-400 transition">
-            <i class="fa-solid fa-microphone-lines text-lg mb-1"></i><span>الصوتي</span>
+            <i class="fa-solid fa-microphone-lines text-lg mb-1"></i><span>الإلقاء </span>
         </button>
         <button onclick="switchTab('debate')" id="nav-debate" class="flex flex-col items-center hover:text-sky-400 transition">
             <i class="fa-solid fa-comments text-lg mb-1"></i><span>المناظرة</span>
