@@ -539,57 +539,141 @@ async function deleteBook(bookId) {
 // ==========================================
 
 let isAnalyzing = false;
+const AN_IDS = [1, 2, 4, 5, 7];
+
+function anParse(t) {
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a < 0 || b < 0) return null;
+    try { const d = JSON.parse(t.slice(a, b + 1)); return Array.isArray(d.criteria) ? d : null; } catch { return null; }
+}
+const anNorm = s => String(s || '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/\s+/g, ' ').trim();
 
 async function evaluateAnalysis() {
     if (isAnalyzing) return;
-
     const bookTitle = document.getElementById('analysis-book-title').value.trim();
     const text = document.getElementById('analysis-text').value.trim();
     const resultCard = document.getElementById('analysis-result-card');
     const outputDiv = document.getElementById('analysis-output');
 
-    if (!bookTitle || !text) {
-        alert("الرجاء كتابة عنوان الكتاب وملخصك الأدبي أولاً.");
-        return;
-    }
+    // ---- فحوص قبل الإرسال لمنع النتائج العشوائية ----
+    if (!bookTitle || !text) { showToast('اكتب عنوان الكتاب وملخصك أولاً'); return; }
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length < 40) { showToast('ملخصك قصير (' + words.length + ' كلمة). اكتب 40 كلمة على الأقل'); return; }
+    if (text.length > 3000) { showToast('الملخص طويل جداً. اختصره إلى 3000 حرف'); return; }
+    const letters = (text.match(/[A-Za-z\u0600-\u06FF]/g) || []).length;
+    const arabic = (text.match(/[\u0600-\u06FF]/g) || []).length;
+    if (letters === 0 || arabic / letters < 0.6) { showToast('اكتب ملخصك باللغة العربية'); return; }
+    if (new Set(words).size / words.length < 0.35) { showToast('النص يحتوي تكراراً كثيراً. اكتب ملخصاً حقيقياً'); return; }
 
     isAnalyzing = true;
     resultCard.classList.remove('hidden');
-    outputDiv.classList.add('whitespace-pre-line');
-    outputDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-sky-400"></i> جاري إرسال الملخص إلى لجنة التحكيم الذكية لتحليله نقدياً ولغوياً...`;
+    outputDiv.classList.remove('whitespace-pre-line');
+    outputDiv.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-sky-400"></i> لجنة التحكيم تقرأ ملخصك سطراً بسطر...`;
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    const prompt = `قم بتحليل التلخيص التالي لكتاب "${bookTitle}" تقييماً حقيقياً وعميقاً.
-
-نص الملخص:
+    const list = AN_IDS.map(id => `{"id":${id},"name":"${IV_RUBRIC[id - 1].t}","max":${IV_RUBRIC[id - 1].m}}`).join(',');
+    const prompt = `أنت عضو لجنة تحكيم صارم وعادل في مسابقة تحدي القراءة العربي، وتقيّم ملخصاً كتبه طالب.
+الكتاب: ${bookTitle}
+ملخص الطالب (${words.length} كلمة):
 """
 ${text}
 """
 
-قدم تقريرك باللغة العربية الفصحى على النحو التالي:
-1. تقدير إجمالي (من 10) مع التعليل.
-2. تقييم العمق الفكري والتحليلي.
-3. تقييم السلامة اللغوية وبلاغة الأسلوب.
-4. هل تم إبراز الأثر الشخصي وتغيير الفكر بوضوح؟
-5. نصائح وتوجيهات عملية دقيقة لضمان حصول الطالب على الدرجة الكاملة في المقابلة.`;
+القواعد:
+1. قيّم فقط ما كُتب فعلاً. كل ملاحظة تشير إلى عبارة من الملخص. ممنوع الكلام العام الذي يصلح لأي ملخص.
+2. لا تدّعِ معرفة تفاصيل الكتاب ولا تصحح معلومات عنه. قيّم الوضوح والتحديد ووجود الأمثلة والأحداث والأسماء.
+3. لا تبالغ بالدرجات: الملخص العام بلا تفاصيل محددة لا يتجاوز 50% من درجة المعيار.
+4. "language_errors": اذكر فقط أخطاء لغوية أو إملائية موجودة حرفياً في النص، وانسخ الكلمة أو العبارة الخاطئة كما هي. إن لم يوجد خطأ فاترك المصفوفة فارغة ولا تخترع أخطاء. 4 أخطاء كحد أقصى.
+5. "improved_summary": أعد كتابة ملخصه نفسه بأفكاره هو بلغة أفصح وترتيب أوضح، دون إضافة أحداث أو شخصيات من عندك. ضع [أضف مثالاً من الكتاب] حيث ينقصه تفصيل.
+6. "checklist": هل يحتوي الملخص فعلاً على: الفكرة العامة، الأفكار الرئيسية، الأثر الشخصي، الدرس المستفاد (true/false).
 
+أخرج JSON صالحاً فقط بلا أي نص أو علامات خارجه:
+{"checklist":{"main_idea":true,"key_ideas":true,"personal_impact":true,"lesson":true},
+"criteria":[ لكل معيار من: ${list} ضع {"id":رقم,"score":رقم لا يتجاوز max,"note":"جملة واحدة تشير إلى عبارة من الملخص"} ],
+"strengths":["نقطة قوة مع اقتباس قصير"],
+"language_errors":[{"wrong":"النص الخاطئ حرفياً","right":"الصواب","why":"سبب قصير"}],
+"improvements":[{"quote":"عبارة حرفية من الملخص","problem":"المشكلة","fix":"الحل"}],
+"improved_summary":"..."}
+improvements من 2 إلى 3 فقط، وstrengths من 1 إلى 2.`;
+
+    const msgs = [
+        { role: 'system', content: 'أنت محكّم مسابقة تحدي القراءة العربي. تُخرج JSON صالحاً فقط، بالعربية الفصحى المبسطة، وكل ملاحظة مرتبطة بنص الطالب.' },
+        { role: 'user', content: prompt }
+    ];
     try {
-        const reply = await askAI([
-            { role: "system", content: "أنت رئيس لجنة تحكيم مسابقة 'تحدي القراءة العربي' وناقد أدبي محترف. أجب بالعربية الفصحى بأسلوب واضح ومحفّز." },
-            { role: "user", content: prompt }
-        ]);
-
-        // عرض رد الذكاء الاصطناعي (reply) داخل صندوق النتيجة (outputDiv)
-        outputDiv.innerHTML = formatAiOutput(reply);
-
-        // حفظ التحليل في سجل المختبر
-        saveAnalysisEntry(bookTitle, text, reply);
-
+        let reply = await askAI(msgs);
+        let d = anParse(reply);
+        if (!d) { // محاولة ثانية واحدة إذا جاء الرد بصيغة خاطئة
+            reply = await askAI([...msgs, { role: 'assistant', content: reply }, { role: 'user', content: 'الرد غير صالح. أعد إخراج JSON صالحاً فقط بالشكل المطلوب.' }]);
+            d = anParse(reply);
+        }
+        if (!d) throw new Error('لم أتمكن من تنظيم التقييم هذه المرة. اضغط تقييم مرة أخرى.');
+        d = anClean(d, text);
+        outputDiv.innerHTML = anRender(d);
+        saveAnalysisEntry(bookTitle, text, JSON.stringify(d));
     } catch (error) {
-        console.error("AI Analysis Error:", error);
-        outputDiv.textContent = "⚠️ " + (error.message || "تعذر الاتصال بخدمة التحليل الذكي.");
+        console.error('AI Analysis Error:', error);
+        outputDiv.textContent = '⚠️ ' + (error.message || 'تعذر الاتصال بخدمة التحليل الذكي.');
     } finally {
         isAnalyzing = false;
     }
+}
+
+// تنظيف الرد: حصر الدرجات، وحذف أي «اقتباس» أو «خطأ لغوي» غير موجود فعلاً في نص الطالب
+function anClean(d, text) {
+    const t = anNorm(text);
+    const inText = s => { const n = anNorm(s); return n.length > 1 && t.includes(n); };
+    d.criteria = AN_IDS.map(id => {
+        const c = d.criteria.find(z => +z.id === id) || {};
+        const m = IV_RUBRIC[id - 1].m;
+        return { id, score: Math.max(0, Math.min(m, Math.round(+c.score || 0))), note: String(c.note || '') };
+    });
+    d.language_errors = (d.language_errors || []).filter(e => e && inText(e.wrong) && anNorm(e.wrong) !== anNorm(e.right)).slice(0, 4);
+    d.improvements = (d.improvements || []).filter(i => i && inText(i.quote)).slice(0, 3);
+    d.strengths = (d.strengths || []).slice(0, 2);
+    d.checklist = d.checklist || {};
+    return d;
+}
+
+function anRender(d) {
+    const E = escapeHtml;
+    let total = 0, max = 0;
+    const rows = d.criteria.map(c => {
+        const m = IV_RUBRIC[c.id - 1].m; total += c.score; max += m;
+        const p = c.score / m, col = p >= .75 ? 'bg-emerald-400' : p >= .5 ? 'bg-amber-400' : 'bg-red-400';
+        return `<div class="space-y-1"><div class="flex justify-between text-[11px]"><span class="font-bold text-gray-200">${E(IV_RUBRIC[c.id - 1].t)}</span><span class="font-mono text-gray-300">${c.score}/${m}</span></div>
+            <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden"><div class="h-full ${col}" style="width:${p * 100}%"></div></div>
+            <p class="text-[11px] text-gray-400">${E(c.note)}</p></div>`;
+    }).join('');
+    const pct = Math.round(total / max * 100);
+    const lvl = pct >= 85 ? ['ممتاز', 'text-emerald-400'] : pct >= 70 ? ['جيد جداً', 'text-sky-400'] : pct >= 50 ? ['جيد', 'text-amber-400'] : ['يحتاج تطويراً', 'text-red-400'];
+    const ck = [['main_idea', 'الفكرة العامة'], ['key_ideas', 'الأفكار الرئيسية'], ['personal_impact', 'الأثر الشخصي'], ['lesson', 'الدرس المستفاد']]
+        .map(([k, n]) => `<span class="text-[10px] font-bold px-2 py-1 rounded-full ${d.checklist[k] === true ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}">${d.checklist[k] === true ? '✓' : '✗'} ${n}</span>`).join('');
+    const li = a => a.map(s => `<li class="text-[11px] text-gray-300">${E(s)}</li>`).join('');
+    const errs = d.language_errors.length ? `<div class="space-y-1.5"><h4 class="text-xs font-bold text-red-400">التدقيق اللغوي</h4>${d.language_errors.map(e => `
+        <div class="bg-[#1E293B] rounded-lg p-2 text-[11px] border border-gray-800"><span class="text-red-300 line-through">${E(e.wrong)}</span> <i class="fa-solid fa-arrow-left text-gray-500 mx-1"></i> <span class="text-emerald-300 font-bold">${E(e.right)}</span><span class="block text-gray-400 mt-0.5">${E(e.why || '')}</span></div>`).join('')}</div>`
+        : `<p class="text-[11px] text-emerald-400"><i class="fa-solid fa-circle-check"></i> لم أجد أخطاء لغوية واضحة في ملخصك.</p>`;
+    const imp = d.improvements.length ? `<div class="space-y-2"><h4 class="text-xs font-bold text-amber-400">ما يحتاج تحسيناً</h4>${d.improvements.map(i => `
+        <div class="bg-[#1E293B] rounded-lg p-2.5 space-y-1 border border-gray-800">
+            <p class="text-[11px] text-amber-300">«${E(i.quote)}»</p>
+            <p class="text-[11px] text-gray-300"><span class="font-bold text-red-400">المشكلة:</span> ${E(i.problem || '')}</p>
+            <p class="text-[11px] text-gray-300"><span class="font-bold text-emerald-400">الحل:</span> ${E(i.fix || '')}</p></div>`).join('')}</div>` : '';
+    const sum = d.improved_summary ? `<div class="bg-[#1E293B] rounded-lg p-2.5 space-y-1 border border-sky-500/20"><h4 class="text-xs font-bold text-sky-400">صياغة محسّنة لملخصك</h4><p class="text-[11px] text-gray-200 leading-relaxed">${E(d.improved_summary)}</p></div>` : '';
+    return `<div class="space-y-3 text-right">
+        <div class="flex items-center justify-between"><div><span class="text-2xl font-bold text-white">${total}</span><span class="text-xs text-gray-400">/${max} (${pct}%)</span></div><span class="text-xs font-bold ${lvl[1]}">${lvl[0]}</span></div>
+        <div class="flex flex-wrap gap-1.5">${ck}</div>
+        <div class="space-y-2.5">${rows}</div>
+        ${d.strengths.length ? `<div><h4 class="text-xs font-bold text-emerald-400 mb-1">نقاط القوة</h4><ul class="list-disc pr-4 space-y-0.5">${li(d.strengths)}</ul></div>` : ''}
+        ${errs}${imp}${sum}</div>`;
+}
+
+// عرض السجل: التقارير الجديدة منسّقة، والقديمة (نص) تبقى كما كانت
+function anHistoryHtml(result) {
+    try {
+        const d = JSON.parse(result);
+        if (d && Array.isArray(d.criteria)) return anRender(d);
+    } catch { }
+    return `<div class="whitespace-pre-line">${formatAiOutput(result)}</div>`;
 }
 
 // ==========================================
@@ -1056,7 +1140,7 @@ function renderAnalysisHistory() {
                 </div>
                 <div>
                     <p class="text-[10px] text-amber-400 font-bold mb-1">تقييم اللجنة:</p>
-                    <div class="text-[11px] text-gray-200 whitespace-pre-line bg-[#0F141C] p-2 rounded-lg">${formatAiOutput(item.result)}</div>
+                    <div class="text-[11px] text-gray-200 bg-[#0F141C] p-2 rounded-lg">${anHistoryHtml(item.result)}</div>
                 </div>
                 <button onclick="deleteAnalysisEntry(${Number(item.id)})" class="text-[11px] text-red-400 hover:underline flex items-center gap-1">
                     <i class="fa-solid fa-trash-can"></i> حذف
@@ -1390,6 +1474,8 @@ function ivRenderRubric() {
 function ivPractice(i) {
     ivSetView('practice');
     ivCurrent = i;
+    ivFollow = null;
+    try { const bk = document.getElementById('iv-book'); if (bk && !bk.value) bk.value = localStorage.getItem('safir_iv_book') || ''; } catch { }
     ivStop();
     const x = IV_QUESTIONS[i];
     document.getElementById('iv-question-box').innerHTML = `<span class="text-[10px] text-emerald-400 font-bold block mb-1">${IV_CATS[x.c]}</span><span class="text-sm font-bold text-white leading-relaxed">${escapeHtml(x.q)}</span>`;
@@ -1437,41 +1523,125 @@ async function ivRecord() {
     if (b) b.innerHTML = isRecording ? '<i class="fa-solid fa-stop"></i> إيقاف' : '<i class="fa-solid fa-microphone"></i> سجّل صوتك';
 }
 
+let ivFollow = null, ivLastImproved = '', ivLastAns = '';
+
+function ivParseJson(t) {
+    const a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a < 0 || b < 0) return null;
+    try { return JSON.parse(t.slice(a, b + 1)); } catch { return null; }
+}
+
 async function ivEvaluate() {
     if (ivBusy) return;
     const ans = document.getElementById('iv-answer').value.trim();
+    const book = document.getElementById('iv-book').value.trim();
     const out = document.getElementById('iv-result');
     if (ivCurrent < 0) { showToast('اختر سؤالاً أولاً'); return; }
-    if (ans.length < 20) { showToast('اكتب إجابة أطول قليلاً'); return; }
-    ivBusy = true;
-    out.classList.remove('hidden');
-    out.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-400"></i> اللجنة تستمع إلى إجابتك...';
-    ivMark(ivCurrent);
+    const words = ans.split(/\s+/).filter(Boolean).length;
+    if (words < 25) { showToast('إجابتك قصيرة جداً (' + words + ' كلمة). اكتب 25 كلمة على الأقل'); return; }
     const x = IV_QUESTIONS[ivCurrent];
-    const prompt = `سؤال المقابلة: "${x.q}"
-إجابة الطالب:
+    const q = ivFollow ? ivFollow.q : x.q;
+    const k = ivFollow ? ivFollow.k : x.k;
+    const needsBook = x.c !== 4;
+    if (needsBook && !book) { showToast('اكتب اسم الكتاب أولاً ليكون التقييم دقيقاً'); document.getElementById('iv-book').focus(); return; }
+    try { localStorage.setItem('safir_iv_book', book); } catch { }
+
+    ivBusy = true;
+    ivMark(ivCurrent);
+    out.classList.remove('hidden');
+    out.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-amber-400"></i> اللجنة تقرأ إجابتك وتقارنها بالسؤال...';
+
+    const ids = [...new Set([k, 4, 5, 6, 9])];
+    const list = ids.map(id => `{"id":${id},"name":"${IV_RUBRIC[id - 1].t}","max":${IV_RUBRIC[id - 1].m}}`).join(',');
+    const prompt = `أنت عضو لجنة تحكيم صارم وعادل في مسابقة تحدي القراءة العربي.
+الكتاب: ${book || 'غير محدد (سؤال عام)'}
+السؤال الذي طُرح على الطالب: "${q}"
+إجابة الطالب (${words} كلمة):
 """
 ${ans}
 """
-قيّم الإجابة وفق معايير التحكيم الرسمية التالية، وأعطِ لكل معيار درجة مع سطر تعليل قصير:
-- عرض الكتاب وتحديد الأفكار الرئيسية والفرعية (من 10)
-- الدروس المستفادة والربط بالواقع (من 5)
-- التراكيب واللغة (من 10)
-- التدفق والوضوح (من 10)
-- الأسلوب الخطابي (من 10)
-- القراءة الناقدة (من 20)
-- الثقة بالنفس من خلال صياغة الإجابة (من 10)
-إن كان المعيار لا ينطبق على هذا السؤال فاكتب «لا ينطبق» ولا تحسبه. ثم اكتب المجموع، وبعده: نقطة قوة واحدة، ونقطتا تحسين، ثم صياغة محسّنة لجملة الافتتاح. كن موجزاً ومشجعاً.`;
+
+قواعد التقييم:
+1. قيّم فقط ما كتبه الطالب فعلاً، واقتبس من كلامه حرفياً. لا تعطِ ملاحظات عامة تصلح لأي إجابة.
+2. أول ما تفحصه: هل أجاب عن السؤال المطروح تحديداً؟ إن ابتعد عنه أو سرد ملخصاً بدل الإجابة فأعطِ "relevance" منخفضاً وخفّض معيار المحتوى.
+3. لا تبالغ في الدرجات: الإجابة العامة الخالية من أمثلة وتفاصيل محددة من الكتاب لا تتجاوز 50% من درجة المعيار. الدرجة العالية تحتاج أمثلة وأسماء وأحداثاً محددة.
+4. لا تتحقق من صحة معلومات الكتاب لأنك لا تملك نصه، لكن اطلب التحديد وبيّن حيث ذكر الطالب كلاماً عاماً يمكن أن ينطبق على أي كتاب.
+5. في "improved_answer" أعد صياغة إجابة الطالب نفسه بأفكاره هو وبلغة أفصح وترتيب أوضح، ولا تخترع أحداثاً أو شخصيات من الكتاب. إن نقصه مثال فضع [اذكر هنا مثالاً من الكتاب].
+6. "follow_up": سؤال متابعة واحد قد تطرحه اللجنة بناءً على إجابته تحديداً.
+
+أخرج JSON صالحاً فقط بلا أي نص خارجه، بهذا الشكل:
+{"relevance":{"score":0-10,"comment":"جملة واحدة"},
+"criteria":[ لكل معيار من هذه القائمة: ${list} ضع {"id":رقم,"score":رقم لا يتجاوز max,"note":"جملة تشير إلى عبارة من إجابته"} ],
+"strengths":["نقطة قوة مع اقتباس قصير من إجابته"],
+"improvements":[{"quote":"عبارة حرفية من إجابته","problem":"ما المشكلة","fix":"كيف يصلحها"}],
+"improved_answer":"...","follow_up":"..."}
+اجعل improvements من 2 إلى 3 عناصر فقط، وstrengths من 1 إلى 2.`;
+
     try {
         const reply = await askAI([
-            { role: 'system', content: "أنت عضو لجنة تحكيم في مسابقة 'تحدي القراءة العربي'. أجب بالعربية الفصحى المبسطة وبإيجاز." },
+            { role: 'system', content: 'أنت محكّم مسابقة تحدي القراءة العربي. تُخرج JSON صالحاً فقط، بالعربية الفصحى المبسطة، وكل ملاحظة مرتبطة بنص الطالب والسؤال.' },
             { role: 'user', content: prompt }
         ]);
-        out.innerHTML = formatAiOutput(reply);
+        const d = ivParseJson(reply);
+        if (!d || !Array.isArray(d.criteria)) { out.innerHTML = formatAiOutput(reply); return; }
+        ivLastAns = anNorm(ans);
+        out.innerHTML = ivRenderResult(d, ids, words);
     } catch (e) {
         out.textContent = '⚠️ ' + (e.message || 'تعذر الاتصال بلجنة التحكيم.');
     } finally { ivBusy = false; }
 }
+
+function ivRenderResult(d, ids, words) {
+    const E = escapeHtml;
+    let total = 0, max = 0;
+    const rows = ids.map(id => {
+        const m = IV_RUBRIC[id - 1].m;
+        const c = (d.criteria.find(z => +z.id === id)) || {};
+        const s = Math.max(0, Math.min(m, Math.round(+c.score || 0)));
+        total += s; max += m;
+        const p = s / m, col = p >= .75 ? 'bg-emerald-400' : p >= .5 ? 'bg-amber-400' : 'bg-red-400';
+        return `<div class="space-y-1"><div class="flex justify-between text-[11px]"><span class="font-bold text-gray-200">${E(IV_RUBRIC[id - 1].t)}</span><span class="font-mono text-gray-300">${s}/${m}</span></div>
+            <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden"><div class="h-full ${col}" style="width:${p * 100}%"></div></div>
+            <p class="text-[11px] text-gray-400">${E(c.note || '')}</p></div>`;
+    }).join('');
+    const rel = Math.max(0, Math.min(10, Math.round(+(d.relevance && d.relevance.score) || 0)));
+    const relCol = rel >= 7 ? 'text-emerald-400 bg-emerald-500/20' : rel >= 4 ? 'text-amber-400 bg-amber-500/20' : 'text-red-400 bg-red-500/20';
+    const pct = Math.round(total / max * 100);
+    ivLastImproved = d.improved_answer || '';
+    const li = a => (a || []).map(s => `<li class="text-[11px] text-gray-300">${E(s)}</li>`).join('');
+    const imp = (d.improvements || []).filter(i => i && ivLastAns.includes(anNorm(i.quote)) ).slice(0, 3).map(i => `
+        <div class="bg-[#1E293B] rounded-lg p-2.5 space-y-1 border border-gray-800">
+            <p class="text-[11px] text-amber-300">«${E(i.quote || '')}»</p>
+            <p class="text-[11px] text-gray-300"><span class="font-bold text-red-400">المشكلة:</span> ${E(i.problem || '')}</p>
+            <p class="text-[11px] text-gray-300"><span class="font-bold text-emerald-400">الحل:</span> ${E(i.fix || '')}</p>
+        </div>`).join('');
+    const short = words < 60 ? `<p class="text-[11px] text-amber-400">إجابتك ${words} كلمة فقط؛ دقيقة كاملة تعني نحو 120 كلمة، فأضف مثالاً.</p>` : '';
+    return `<div class="space-y-3 text-right">
+        <div class="flex items-center justify-between"><div><span class="text-2xl font-bold text-white">${total}</span><span class="text-xs text-gray-400">/${max} (${pct}%)</span></div>
+            <span class="text-[10px] font-bold px-2 py-1 rounded-full ${relCol}">الصلة بالسؤال ${rel}/10</span></div>
+        <p class="text-[11px] text-gray-300">${E((d.relevance && d.relevance.comment) || '')}</p>${short}
+        <div class="space-y-2.5">${rows}</div>
+        <div><h4 class="text-xs font-bold text-emerald-400 mb-1">نقاط القوة</h4><ul class="list-disc pr-4 space-y-0.5">${li(d.strengths)}</ul></div>
+        <div class="space-y-2"><h4 class="text-xs font-bold text-amber-400">ما يحتاج تحسيناً في إجابتك</h4>${imp}</div>
+        <div class="bg-[#1E293B] rounded-lg p-2.5 space-y-1.5 border border-emerald-500/20">
+            <div class="flex items-center justify-between"><h4 class="text-xs font-bold text-sky-400">صياغة محسّنة لإجابتك</h4>
+            <button onclick="speakArabic(ivLastImproved,{rate:0.95})" class="text-[11px] text-sky-400"><i class="fa-solid fa-volume-high"></i> استمع</button></div>
+            <p class="text-[11px] text-gray-200 leading-relaxed">${E(d.improved_answer || '')}</p></div>
+        ${d.follow_up ? `<button onclick="ivFollowUp()" class="w-full text-right bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-2.5"><span class="block text-[10px] font-bold text-emerald-400 mb-0.5">سؤال متابعة من اللجنة (اضغط للإجابة عنه)</span><span class="text-[11px] text-gray-200">${E(d.follow_up)}</span></button>` : ''}
+    </div>`;
+}
+function ivFollowUp() {
+    const el = document.querySelector('#iv-result button[onclick="ivFollowUp()"] span:last-child');
+    if (!el) return;
+    ivFollow = { q: el.textContent, k: IV_QUESTIONS[ivCurrent].k };
+    document.getElementById('iv-question-box').innerHTML = `<span class="text-[10px] text-amber-400 font-bold block mb-1">سؤال متابعة</span><span class="text-sm font-bold text-white leading-relaxed">${E_(ivFollow.q)}</span>`;
+    document.getElementById('iv-answer').value = '';
+    document.getElementById('iv-result').classList.add('hidden');
+    document.getElementById('iv-timer-wrap').classList.add('hidden');
+    ivStop();
+    document.getElementById('iv-answer').focus();
+}
+const E_ = escapeHtml;
 
 function openInterviewLab(view) {
     switchTab('audio');
